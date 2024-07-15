@@ -5,6 +5,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.sql.Date;
+import java.util.Map;
 
 public class PostManager {
     private FirebaseFirestore db;
@@ -45,6 +46,29 @@ public class PostManager {
                 .addOnFailureListener(e -> {
                     listener.onFailure("Error al obtener el post: " + e.getMessage());
                 });
+    }
+
+    public void updatePost(String postId, Map<String, Object> updatedData, OnPostUpdatedListener listener) {
+        db.collection("posts").whereEqualTo("id", postId)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        for (DocumentSnapshot document : queryDocumentSnapshots) {
+                            document.getReference().update(updatedData)
+                                    .addOnSuccessListener(aVoid -> listener.onSuccess())
+                                    .addOnFailureListener(e -> listener.onFailure(e.getMessage()));
+                            return;
+                        }
+                    } else {
+                        listener.onFailure("Post no encontrado");
+                    }
+                })
+                .addOnFailureListener(e -> listener.onFailure("Error al buscar post: " + e.getMessage()));
+    }
+
+    public interface OnPostUpdatedListener {
+        void onSuccess();
+        void onFailure(String error);
     }
 
     public interface OnPostAddedListener {

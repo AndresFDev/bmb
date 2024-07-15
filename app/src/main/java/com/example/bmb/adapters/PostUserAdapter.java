@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Rect;
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,12 +17,14 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.bmb.R;
 import com.example.bmb.data.PostManager;
 import com.example.bmb.models.PostModel;
+import com.example.bmb.ui.MainActivity;
 import com.example.bmb.ui.main.AddPostFragment;
 import com.example.bmb.utils.ProgressUtils;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -100,8 +103,16 @@ public class PostUserAdapter extends RecyclerView.Adapter<PostUserAdapter.PostVi
         editPost.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START);
         editPost.setTextColor(context.getResources().getColor(R.color.white));
         editPost.setOnClickListener(v -> {
-            Intent intent = new Intent(context, AddPostFragment.class);
-            context.startActivity(intent);
+            Fragment fragment = new AddPostFragment();
+            Bundle args = new Bundle();
+            args.putString("postId", postId);
+            fragment.setArguments(args);
+
+            ((MainActivity) context).getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragmentContainer, fragment)
+                    .addToBackStack(null)
+                    .commit();
+
             bottomSheetDialog.dismiss();
         });
 
@@ -109,6 +120,7 @@ public class PostUserAdapter extends RecyclerView.Adapter<PostUserAdapter.PostVi
         deletePost.setPadding(32, 32, 8, 32);
         deletePost.setBackgroundColor(context.getResources().getColor(R.color.none));
         deletePost.setIcon(ContextCompat.getDrawable(context, R.drawable.ic_delete));
+        deletePost.setTextSize(24);
         deletePost.setIconTint(ColorStateList.valueOf(context.getResources().getColor(com.google.android.material.R.color.design_default_color_error)));
         deletePost.setText("Eliminar post");
         deletePost.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START);
