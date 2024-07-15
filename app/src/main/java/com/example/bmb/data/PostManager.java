@@ -1,6 +1,7 @@
 package com.example.bmb.data;
 
 import com.example.bmb.models.PostModel;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.sql.Date;
@@ -22,13 +23,15 @@ public class PostManager {
     }
 
     public void deletePost(String postId, String userId, OnPostDeletedListener listener) {
-        db.collection("posts").document(postId)
+        db.collection("posts")
+                .whereEqualTo("id", postId)
                 .get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        DocumentSnapshot documentSnapshot = queryDocumentSnapshots.getDocuments().get(0);
                         String idUser = documentSnapshot.getString("idUser");
                         if (idUser != null && idUser.equals(userId)) {
-                            db.collection("posts").document(postId)
+                            db.collection("posts").document(documentSnapshot.getId())
                                     .delete()
                                     .addOnSuccessListener(aVoid -> listener.onSuccess())
                                     .addOnFailureListener(e -> listener.onFailure(e.getMessage()));

@@ -47,8 +47,6 @@ public class PostUserAdapter extends RecyclerView.Adapter<PostUserAdapter.PostVi
             ivCarousel = itemView.findViewById(R.id.ivCarousel);
             btnOptions = itemView.findViewById(R.id.btnOptions);
             tvTitle = itemView.findViewById(R.id.tvTitle);
-
-            btnOptions.setOnClickListener(v -> showOptionsSheet(itemView.getContext()));
         }
     }
 
@@ -82,9 +80,13 @@ public class PostUserAdapter extends RecyclerView.Adapter<PostUserAdapter.PostVi
             holder.tvTitle.setAlpha(lerp(1F, 0F, 0F, 80F, maskRect.left));
         });
 
+        String postId = post.getId();
+        holder.btnOptions.setOnClickListener(v -> showOptionsSheet(holder.itemView.getContext(), postId, position));
+
     }
 
-    private static void showOptionsSheet(Context context) {
+    private void showOptionsSheet(Context context,  String postId, int position) {
+
         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(context);
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -120,19 +122,16 @@ public class PostUserAdapter extends RecyclerView.Adapter<PostUserAdapter.PostVi
                         public void onClick(DialogInterface dialog, int which) {
                             ProgressUtils.showProgress();
 
-                            // Aquí obtienes el postId del post que quieres eliminar
-                            String postIdToDelete = "postId"; // Sustituye "postId" con el postId real del post que deseas eliminar
-
-                            // Aquí obtienes el userId del usuario actual
                             String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-                            // Llamas al método deletePost del PostManager
                             PostManager postManager = new PostManager();
-                            postManager.deletePost(postIdToDelete, currentUserId, new PostManager.OnPostDeletedListener() {
+                            postManager.deletePost(postId, currentUserId, new PostManager.OnPostDeletedListener() {
                                 @Override
                                 public void onSuccess() {
                                     ProgressUtils.hideProgress();
                                     Toast.makeText(context, "Post eliminado correctamente", Toast.LENGTH_SHORT).show();
+                                    postList.remove(position); // Eliminar el post de la lista local
+                                    notifyItemRemoved(position);
                                 }
 
                                 @Override
