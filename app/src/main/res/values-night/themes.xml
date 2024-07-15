@@ -1,0 +1,15 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.BMB" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your dark theme here. -->
+        <item name="colorPrimary">@color/colorPrimaryDark</item>
+    </style>
+
+    <style name="IconLogo">
+        <item name="tint">@color/colorPrimaryDark</item>
+    </style>
+
+    <style name="TextSplash" parent="Widget.MaterialComponents.TextView">
+        <item name="android:textColor">@color/colorPrimaryDark</item>
+    </style>
+</resources>

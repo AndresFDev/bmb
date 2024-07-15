@@ -1,0 +1,79 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.BMB" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+    </style>
+
+    <style name="Theme.BMB" parent="Base.Theme.BMB">
+        <item name="textInputStyle">@style/Widget.App.TextInputLayout</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.App.Button</item>
+        <item name="bottomNavigationStyle">@style/Widget.App.BottomNavigationView</item>
+        <item name="circularProgressIndicatorStyle">@style/Widget.App.CircularProgressIndicator</item>
+    </style>
+
+    <style name="IconLogo">
+        <item name="tint">@color/black</item>
+    </style>
+
+    <style name="BgSplash">
+        <item name="background">@color/bgColor</item>
+    </style>
+
+    <style name="TextAppearance.App.Button" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">@font/product_sans_bold</item>
+        <item name="android:fontFamily">@font/product_sans_bold</item>
+        <item name="android:textSize">@dimen/textMedium</item>
+    </style>
+
+    <style name="Widget.App.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="materialThemeOverlay">@style/ThemeOverlay.App.TextInputLayout</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.App.SmallComponent</item>
+        <item name="hintTextColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="ThemeOverlay.App.TextInputLayout" parent="">
+        <!--<item name="colorPrimary">@color/shrine_pink_100</item>
+        <item name="colorOnSurface">@color/shrine_pink_900</item>
+        <item name="colorError">@color/shrine_red</item>-->
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.App.TitleMedium</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.App.BodySmall</item>
+        <item name="editTextStyle">@style/Widget.Material3.TextInputEditText.OutlinedBox</item>
+    </style>
+
+    <style name="TextAppearance.App.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="fontFamily">@font/product_sans_medium</item>
+        <item name="android:fontFamily">@font/product_sans_medium</item>
+    </style>
+
+    <style name="TextAppearance.App.BodySmall" parent="TextAppearance.Material3.BodySmall">
+        <item name="fontFamily">@font/product_sans_thin</item>
+        <item name="android:fontFamily">@font/product_sans_thin</item>
+    </style>
+
+    <style name="ShapeAppearance.App.SmallComponent" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/xLarge</item>
+    </style>
+
+    <style name="Widget.App.BottomNavigationView" parent="Widget.Material3.BottomNavigationView">
+        <item name="materialThemeOverlay">@style/ThemeOverlay.App.BottomNavigationView</item>
+    </style>
+
+    <style name="ThemeOverlay.App.BottomNavigationView" parent="">
+        <item name="colorSurface">@color/colorPrimaryDark</item>
+        <item name="colorOnSurfaceVariant">@color/black</item>
+    </style>
+
+    <style name="Widget.App.CircularProgressIndicator" parent="Widget.Material3.CircularProgressIndicator.Legacy">
+        <item name="materialThemeOverlay">@style/ThemeOverlay.App.CircularProgressIndicator</item>
+        <item name="indicatorSize">60dp</item>
+        <item name="trackThickness">4dp</item>
+        <item name="indicatorColor">@color/colorPrimaryDark</item>
+        <item name="trackColor">@color/translucid</item>
+    </style>
+
+    <style name="ThemeOverlay.App.CircularProgressIndicator" parent="">
+        <item name="colorPrimary">@color/colorPrimaryDark</item>
+    </style>
+</resources>
