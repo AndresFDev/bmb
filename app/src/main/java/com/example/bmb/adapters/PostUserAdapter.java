@@ -102,6 +102,7 @@ public class PostUserAdapter extends RecyclerView.Adapter<PostUserAdapter.PostVi
         editPost.setText("Editar post");
         editPost.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START);
         editPost.setTextColor(context.getResources().getColor(R.color.white));
+        editPost.setTextSize(16);
         editPost.setOnClickListener(v -> {
             Fragment fragment = new AddPostFragment();
             Bundle args = new Bundle();
@@ -120,11 +121,11 @@ public class PostUserAdapter extends RecyclerView.Adapter<PostUserAdapter.PostVi
         deletePost.setPadding(32, 32, 8, 32);
         deletePost.setBackgroundColor(context.getResources().getColor(R.color.none));
         deletePost.setIcon(ContextCompat.getDrawable(context, R.drawable.ic_delete));
-        deletePost.setTextSize(24);
         deletePost.setIconTint(ColorStateList.valueOf(context.getResources().getColor(com.google.android.material.R.color.design_default_color_error)));
         deletePost.setText("Eliminar post");
         deletePost.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START);
         deletePost.setTextColor(context.getResources().getColor(com.google.android.material.R.color.design_default_color_error));
+        deletePost.setTextSize(16);
         deletePost.setOnClickListener(v -> {
             new MaterialAlertDialogBuilder(context)
                     .setTitle("Eliminar post")

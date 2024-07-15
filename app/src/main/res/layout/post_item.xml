@@ -8,9 +8,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/small"
-        app:strokeWidth="@dimen/none"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:strokeWidth="@dimen/none">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -30,7 +30,7 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="3"
-                android:padding="@dimen/small"/>
+                android:padding="@dimen/small" />
 
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
@@ -82,18 +82,19 @@
             android:id="@+id/btnFavorite"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_favorite"
+            android:background="@color/none"
             android:padding="@dimen/small"
-            android:background="@color/none"/>
+            android:src="@drawable/ic_favorite" />
 
         <ImageButton
             android:id="@+id/btnOptions"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:backgroundTint="@color/none"
             android:padding="@dimen/small"
             android:src="@drawable/ic_more"
-            android:backgroundTint="@color/none"
-            android:layout_gravity="end"/>
+            android:visibility="gone" />
 
     </com.google.android.material.card.MaterialCardView>
 
