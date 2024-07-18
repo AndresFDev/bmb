@@ -3,6 +3,16 @@
     <style name="Base.Theme.BMB" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
         <item name="colorPrimary">@color/colorPrimaryDark</item>
+        <item name="colorOutline">@color/colorPrimaryDark</item>
+    </style>
+
+    <style name="Widget.App.MaterialDivider" parent="Widget.Material3.MaterialDivider">
+        <item name="dividerColor">@color/colorPrimaryDark</item>
+    </style>
+
+    <style name="ThemeOverlay.App.FloatingActionButton" parent="">
+        <item name="colorContainer">@color/colorPrimaryDark</item>
+        <item name="colorOnContainer">@color/white</item>
     </style>
 
     <style name="IconLogo">
@@ -11,5 +21,12 @@
 
     <style name="TextSplash" parent="Widget.MaterialComponents.TextView">
         <item name="android:textColor">@color/colorPrimaryDark</item>
+    </style>
+
+    <style name="UserNameTitle">
+        <item name="android:textSize">40sp</item>
+        <item name="android:textColor">@color/colorPrimaryDark</item>
+        <item name="android:strokeColor">?attr/colorBackgroundFloating</item>
+        <item name="fontFamily">@font/product_sans_black</item>
     </style>
 </resources>

@@ -2,6 +2,7 @@ package com.example.bmb.ui.main;
 
 import android.os.Bundle;
 
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -13,11 +14,14 @@ import android.widget.Toast;
 
 import com.example.bmb.R;
 import com.example.bmb.adapters.PostAdapter;
-import com.example.bmb.models.PostModel;
+import com.example.bmb.data.models.PostModel;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +31,7 @@ public class FavoritesFragment extends Fragment {
     private RecyclerView rvFavorites;
     private PostAdapter postAdapter;
     private List<PostModel> favoritePosts;
+    private FirebaseFirestore db;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -38,6 +43,7 @@ public class FavoritesFragment extends Fragment {
         postAdapter = new PostAdapter(favoritePosts);
         rvFavorites.setAdapter(postAdapter);
 
+        db = FirebaseFirestore.getInstance();
         loadFavoritePosts();
 
         return view;
@@ -48,20 +54,50 @@ public class FavoritesFragment extends Fragment {
         if (user != null) {
             String userId = user.getUid();
 
-            FirebaseFirestore db = FirebaseFirestore.getInstance();
             db.collection("users").document(userId)
                     .collection("favorites")
-                    .get()
-                    .addOnSuccessListener(queryDocumentSnapshots -> {
-                        for (DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
-                            PostModel post = document.toObject(PostModel.class);
-                            favoritePosts.add(post);
+                    .addSnapshotListener(new EventListener<QuerySnapshot>() {
+                        @Override
+                        public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+                            if (e != null) {
+                                Toast.makeText(getContext(), "Error al cargar favoritos", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+
+                            if (queryDocumentSnapshots != null) {
+                                List<String> favoritePostIds = new ArrayList<>();
+                                for (DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
+                                    favoritePostIds.add(document.getId());
+                                }
+
+                                if (!favoritePostIds.isEmpty()) {
+                                    loadPostsDetails(favoritePostIds);
+                                } else {
+                                    favoritePosts.clear();
+                                    postAdapter.notifyDataSetChanged();
+                                }
+                            }
                         }
-                        postAdapter.notifyDataSetChanged();
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(getContext(), "Failed to load favorites", Toast.LENGTH_SHORT).show();
                     });
         }
+    }
+
+    private void loadPostsDetails(List<String> postIds) {
+        db.collection("posts")
+                .whereIn("id", postIds)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots != null) {
+                        favoritePosts.clear();
+                        for (DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
+                            PostModel post = document.toObject(PostModel.class);
+                            if (post != null) {
+                                favoritePosts.add(post);
+                            }
+                        }
+                        postAdapter.notifyDataSetChanged();
+                    }
+                })
+                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al cargar los detalles de los posts", Toast.LENGTH_SHORT).show());
     }
 }

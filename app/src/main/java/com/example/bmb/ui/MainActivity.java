@@ -6,6 +6,7 @@ import androidx.appcompat.view.menu.MenuBuilder;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -15,6 +16,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 import android.view.Menu;
 
@@ -26,7 +28,7 @@ import com.example.bmb.ui.main.HomeFragment;
 import com.example.bmb.ui.main.ProfileFragment;
 import com.example.bmb.R;
 import com.example.bmb.ui.main.VetsFragment;
-import com.example.bmb.data.AuthManager;
+import com.example.bmb.auth.AuthManager;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.textview.MaterialTextView;
@@ -42,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private FragmentManager fragmentManager;
     private ImageView ivUser;
     private MaterialTextView tvUserName;
+    private LinearLayout llUser;
     private boolean isKeyboardVisible = false;
 
     @Override
@@ -50,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         bottomNavigation = findViewById(R.id.bottomNavigation);
+        llUser = findViewById(R.id.llUser);
         topAppBar = findViewById(R.id.topAppBar);
         ivUser = findViewById(R.id.ivUser);
         tvUserName = findViewById(R.id.tvUserName);
@@ -86,9 +90,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupListeners() {
         topAppBar.setOnMenuItemClickListener(this::onMenuItemClick);
-        ivUser.setOnClickListener(v -> selectFragment(new ProfileFragment()));
+        llUser.setOnClickListener(v -> selectFragment(new ProfileFragment()));
         bottomNavigation.setOnItemSelectedListener(this::onNavigationItemSelected);
         bottomNavigation.setOnItemReselectedListener(this::onNavigationItemReselected);
+
+        fragmentManager.addOnBackStackChangedListener(() -> {
+            Fragment currentFragment = fragmentManager.findFragmentById(R.id.fragmentContainer);
+            if (currentFragment instanceof HomeFragment) {
+                setupRecyclerViewScrollListener(((HomeFragment) currentFragment).getRvHome());
+            }
+        });
     }
 
     private boolean onMenuItemClick(MenuItem item) {
@@ -153,10 +164,8 @@ public class MainActivity extends AppCompatActivity {
     private void resetTopAppBarIcons() {
         setMenuItemIcon(topAppBar.getMenu(), R.id.add, R.drawable.ic_add);
         setMenuItemIcon(topAppBar.getMenu(), R.id.favorite, R.drawable.ic_favorite);
-        // Agrega más íconos de TopAppBar según sea necesario
     }
 
-    // Método para establecer el ícono del elemento del menú
     private void setMenuItemIcon(Menu menu, int menuItemId, int iconResId) {
         MenuItem menuItem = menu.findItem(menuItemId);
         if (menuItem != null) {
@@ -239,5 +248,20 @@ public class MainActivity extends AppCompatActivity {
 
     private void showBottomNavigationView() {
         bottomNavigation.setVisibility(View.VISIBLE);
+    }
+
+    private void setupRecyclerViewScrollListener(RecyclerView rvHome) {
+        if (rvHome != null) {
+            rvHome.addOnScrollListener(new RecyclerView.OnScrollListener() {
+                @Override
+                public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                    if (dy > 0 && bottomNavigation.isShown()) {
+                        bottomNavigation.setVisibility(View.GONE);
+                    } else if (dy < 0) {
+                        bottomNavigation.setVisibility(View.VISIBLE);
+                    }
+                }
+            });
+        }
     }
 }

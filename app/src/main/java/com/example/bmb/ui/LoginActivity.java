@@ -17,7 +17,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.bmb.data.ImageManager;
 import com.example.bmb.R;
-import com.example.bmb.data.AuthManager;
+import com.example.bmb.auth.AuthManager;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.common.api.ApiException;
@@ -39,7 +39,6 @@ public class LoginActivity extends AppCompatActivity {
     private ImageManager imageManager;
     private Bitmap selectedBitmap;
     private MaterialButton btnPhoto, btnEnter, btnRegister, btnSignUp;
-    private LinearLayoutCompat llSesion;
     private TextInputLayout tilUserName, tilEmail, tilPassword, tilConfirm;
     private TextInputEditText etUserName, etEmail, etPassword, etConfirm;
     private ExtendedFloatingActionButton btnGoogle;
@@ -91,7 +90,6 @@ public class LoginActivity extends AppCompatActivity {
         btnEnter = findViewById(R.id.btnEnter);
         btnRegister = findViewById(R.id.btnRegister);
         btnSignUp = findViewById(R.id.btnSignUp);
-        llSesion = findViewById(R.id.llSesion);
         tilUserName = findViewById(R.id.tilUserName);
         tilEmail = findViewById(R.id.tilEmail);
         tilPassword = findViewById(R.id.tilPassword);
@@ -255,7 +253,6 @@ public class LoginActivity extends AppCompatActivity {
             msgReg1.setText(R.string.msgReg1);
             msgReg2.setText(R.string.login);
             btnRegister.setVisibility(View.VISIBLE);
-            llSesion.setVisibility(View.GONE);
             btnEnter.setVisibility(View.GONE);
             btnSignUp.setText(R.string.login);
         } else if (statusText.equals(getString(R.string.login))) {
@@ -266,7 +263,6 @@ public class LoginActivity extends AppCompatActivity {
             msgReg2.setText(R.string.optionLogin);
             btnRegister.setVisibility(View.GONE);
             btnEnter.setVisibility(View.VISIBLE);
-            llSesion.setVisibility(View.VISIBLE);
             btnSignUp.setText(R.string.signUp);
         }
     }

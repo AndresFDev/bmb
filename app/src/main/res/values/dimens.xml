@@ -9,5 +9,6 @@
     <dimen name="textMedium">16sp</dimen>
     <dimen name="textLarge">24sp</dimen>
     <dimen name="textXLarge">32sp</dimen>
+    <dimen name="textSheet">6sp</dimen>
     <dimen name="none">0dp</dimen>
 </resources>

@@ -18,7 +18,7 @@ import com.bumptech.glide.Glide;
 import com.example.bmb.R;
 import com.example.bmb.data.ImageManager;
 import com.example.bmb.data.PostManager;
-import com.example.bmb.models.PostModel;
+import com.example.bmb.data.models.PostModel;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;

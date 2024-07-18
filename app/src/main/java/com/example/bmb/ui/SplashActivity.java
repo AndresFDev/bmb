@@ -2,7 +2,6 @@ package com.example.bmb.ui;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.widget.ImageView;
@@ -12,7 +11,8 @@ import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.bmb.R;
-import com.example.bmb.data.AuthManager;
+import com.example.bmb.auth.AuthManager;
+import com.example.bmb.utils.NetworkUtils;
 import com.google.android.material.textview.MaterialTextView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -42,33 +42,38 @@ public class SplashActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
 
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                FirebaseUser user = mAuth.getCurrentUser();
+        if (NetworkUtils.isNetworkAvailable(this)) {
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    FirebaseUser user = mAuth.getCurrentUser();
 
-                if (user != null) {
-                    AuthManager authManager = new AuthManager(SplashActivity.this);
-                    authManager.fetchUserData(user, new AuthManager.OnUserDataFetchListener() {
-                        @Override
-                        public void onSuccess(Map<String, Object> userData) {
-                            Intent intent = new Intent(SplashActivity.this, MainActivity.class);
-                            intent.putExtra("userData", new HashMap<>(userData));
-                            startActivity(intent);
-                            finish();
-                        }
+                    if (user != null) {
+                        AuthManager authManager = new AuthManager(SplashActivity.this);
+                        authManager.fetchUserData(user, new AuthManager.OnUserDataFetchListener() {
+                            @Override
+                            public void onSuccess(Map<String, Object> userData) {
+                                Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+                                intent.putExtra("userData", new HashMap<>(userData));
+                                startActivity(intent);
+                                finish();
+                            }
 
-                        @Override
-                        public void onFailure(String errorMessage) {
-                            Toast.makeText(SplashActivity.this, "Error al obtener datos del usuario: " + errorMessage, Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                } else {
-                    Intent intent = new Intent(SplashActivity.this, LoginActivity.class);
-                    startActivity(intent);
-                    finish();
+                            @Override
+                            public void onFailure(String errorMessage) {
+                                Toast.makeText(SplashActivity.this, "Error al obtener datos del usuario: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    } else {
+                        Intent intent = new Intent(SplashActivity.this, LoginActivity.class);
+                        startActivity(intent);
+                        finish();
+                    }
                 }
-            }
-        }, SPLASH_DELAY);
+            }, SPLASH_DELAY);
+        } else {
+            NetworkUtils.showNoInternetDialog(this);
+        }
+
     }
 }

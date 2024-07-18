@@ -1,10 +1,9 @@
 package com.example.bmb.data;
 
-import com.example.bmb.models.PostModel;
+import com.example.bmb.data.models.PostModel;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.sql.Date;
 import java.util.Map;
 
 public class PostManager {

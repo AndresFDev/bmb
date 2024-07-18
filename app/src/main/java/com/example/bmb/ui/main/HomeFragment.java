@@ -13,7 +13,7 @@ import android.view.ViewGroup;
 
 import com.example.bmb.R;
 import com.example.bmb.adapters.PostAdapter;
-import com.example.bmb.models.PostModel;
+import com.example.bmb.data.models.PostModel;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -64,5 +64,9 @@ public class HomeFragment extends Fragment {
                 .addOnFailureListener(e -> {
                     Log.e("HomeFragment", "Error al cargar publicaciones", e);
                 });
+    }
+
+    public RecyclerView getRvHome() {
+        return rvHome;
     }
 }

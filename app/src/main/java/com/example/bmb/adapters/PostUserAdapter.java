@@ -2,9 +2,7 @@ package com.example.bmb.adapters;
 
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.res.ColorStateList;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,13 +15,14 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.bmb.R;
 import com.example.bmb.data.PostManager;
-import com.example.bmb.models.PostModel;
+import com.example.bmb.data.models.PostModel;
 import com.example.bmb.ui.MainActivity;
 import com.example.bmb.ui.main.AddPostFragment;
 import com.example.bmb.utils.ProgressUtils;
@@ -58,6 +57,12 @@ public class PostUserAdapter extends RecyclerView.Adapter<PostUserAdapter.PostVi
         this.postList = postList;
     }
 
+    public void updatePosts(List<PostModel> newPosts) {
+        this.postList.clear();
+        this.postList.addAll(newPosts);
+        notifyDataSetChanged();
+    }
+
     @NonNull
     @Override
     public PostViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -89,85 +94,90 @@ public class PostUserAdapter extends RecyclerView.Adapter<PostUserAdapter.PostVi
     }
 
     private void showOptionsSheet(Context context,  String postId, int position) {
-
         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(context);
-        LinearLayout layout = new LinearLayout(context);
-        layout.setOrientation(LinearLayout.VERTICAL);
+        View sheetView =  LayoutInflater.from(context).inflate(R.layout.bottom_sheet_layout, null);
+        LinearLayout bottomSheetContent = sheetView.findViewById(R.id.llButtonSheet);
 
-        MaterialButton editPost = new MaterialButton(context);
-        editPost.setPadding(32, 32, 0, 32);
-        editPost.setBackgroundColor(context.getColor(R.color.none));
-        editPost.setIcon(ContextCompat.getDrawable(context, R.drawable.ic_edit));
-        editPost.setIconTint(ColorStateList.valueOf(context.getColor(R.color.white)));
+        MaterialButton editPost = bottomSheetContent.findViewById(R.id.btnOptionOne);
         editPost.setText("Editar post");
-        editPost.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START);
-        editPost.setTextColor(context.getResources().getColor(R.color.white));
-        editPost.setTextSize(16);
-        editPost.setOnClickListener(v -> {
-            Fragment fragment = new AddPostFragment();
-            Bundle args = new Bundle();
-            args.putString("postId", postId);
-            fragment.setArguments(args);
+        editPost.setIcon(ResourcesCompat.getDrawable(context.getResources(), R.drawable.ic_edit, context.getTheme()));
+        editPost.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Fragment fragment = new AddPostFragment();
+                Bundle args = new Bundle();
+                args.putString("postId", postId);
+                fragment.setArguments(args);
 
-            ((MainActivity) context).getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragmentContainer, fragment)
-                    .addToBackStack(null)
-                    .commit();
+                ((MainActivity) context).getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragmentContainer, fragment)
+                        .addToBackStack(null)
+                        .commit();
 
-            bottomSheetDialog.dismiss();
+                bottomSheetDialog.dismiss();
+            }
         });
 
-        MaterialButton deletePost = new MaterialButton(context);
-        deletePost.setPadding(32, 32, 8, 32);
-        deletePost.setBackgroundColor(context.getResources().getColor(R.color.none));
-        deletePost.setIcon(ContextCompat.getDrawable(context, R.drawable.ic_delete));
-        deletePost.setIconTint(ColorStateList.valueOf(context.getResources().getColor(com.google.android.material.R.color.design_default_color_error)));
+        MaterialButton deletePost = bottomSheetContent.findViewById(R.id.btnOptionTwo);
         deletePost.setText("Eliminar post");
-        deletePost.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START);
-        deletePost.setTextColor(context.getResources().getColor(com.google.android.material.R.color.design_default_color_error));
-        deletePost.setTextSize(16);
-        deletePost.setOnClickListener(v -> {
-            new MaterialAlertDialogBuilder(context)
-                    .setTitle("Eliminar post")
-                    .setMessage("¿Estás seguro de que quieres eliminarel post?")
-                    .setPositiveButton("Eliminar", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            ProgressUtils.showProgress();
+        deletePost.setIcon(ResourcesCompat.getDrawable(context.getResources(), R.drawable.ic_delete, context.getTheme()));
+        deletePost.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                new MaterialAlertDialogBuilder(context)
+                        .setTitle("Eliminar post")
+                        .setMessage("¿Estás seguro de que quieres eliminar tu post? No lo podrás recuperar.")
+                        .setPositiveButton("Eliminar", (dialog, which) -> deletePost())
+                        .setNegativeButton("Cancelar", null)
+                        .show();
+                bottomSheetDialog.dismiss();
+            }
 
-                            String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+            private void deletePost() {
+                new MaterialAlertDialogBuilder(context)
+                        .setTitle("Eliminar post")
+                        .setMessage("¿Estás seguro de que quieres eliminarel post?")
+                        .setPositiveButton("Eliminar", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                ProgressUtils.showProgress();
 
-                            PostManager postManager = new PostManager();
-                            postManager.deletePost(postId, currentUserId, new PostManager.OnPostDeletedListener() {
-                                @Override
-                                public void onSuccess() {
-                                    ProgressUtils.hideProgress();
-                                    Toast.makeText(context, "Post eliminado correctamente", Toast.LENGTH_SHORT).show();
-                                    postList.remove(position); // Eliminar el post de la lista local
-                                    notifyItemRemoved(position);
-                                }
+                                String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-                                @Override
-                                public void onFailure(String error) {
-                                    ProgressUtils.hideProgress();
-                                    Toast.makeText(context, "Error al eliminar post: " + error, Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        }
-                    })
-                    .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                        }
-                    })
-                    .show();
-            bottomSheetDialog.dismiss();
+                                PostManager postManager = new PostManager();
+                                postManager.deletePost(postId, currentUserId, new PostManager.OnPostDeletedListener() {
+                                    @Override
+                                    public void onSuccess() {
+                                        ProgressUtils.hideProgress();
+                                        Toast.makeText(context, "Post eliminado correctamente", Toast.LENGTH_SHORT).show();
+                                        postList.remove(position);
+                                        notifyItemRemoved(position);
+                                    }
+
+                                    @Override
+                                    public void onFailure(String error) {
+                                        ProgressUtils.hideProgress();
+                                        Toast.makeText(context, "Error al eliminar post: " + error, Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
+                        })
+                        .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                            }
+                        })
+                        .show();
+            }
         });
 
-        layout.addView(editPost);
-        layout.addView(deletePost);
+        deletePost.setIconTint(ColorStateList.valueOf(context.getResources().getColor(com.google.android.material.R.color.design_default_color_error)));
+        deletePost.setTextColor(context.getResources().getColor(com.google.android.material.R.color.design_default_color_error));
 
-        bottomSheetDialog.setContentView(layout);
+        bottomSheetContent.addView(editPost);
+        bottomSheetContent.addView(deletePost);
+
+        bottomSheetDialog.setContentView(sheetView);
         bottomSheetDialog.show();
     }
 

@@ -25,7 +25,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     app:cardCornerRadius="75dp"
-                    app:layout_constraintEnd_toStartOf="@id/tvUserName"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
 
@@ -40,24 +40,62 @@
 
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/tvUserName"
+                    style="@style/UserNameTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/medium"
-                    android:textColor="@color/colorPrimary"
-                    android:textSize="40sp"
-                    app:fontFamily="@font/product_sans_black"
                     app:layout_constraintBottom_toBottomOf="@id/cvImage"
-                    app:layout_constraintStart_toEndOf="@id/cvImage"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
 
                 <ImageButton
                     android:id="@+id/btnUserSettings"
+                    style="@style/ImageButtonStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@color/none"
                     android:src="@drawable/ic_settings"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:id="@+id/divider"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/medium"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/cvImage" />
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/clEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/medium"
+                    android:visibility="gone"
+                    app:layout_constraintTop_toBottomOf="@+id/divider">
+
+                    <ImageView
+                        android:id="@+id/ivImage"
+                        android:layout_width="200dp"
+                        android:layout_height="200dp"
+                        android:padding="@dimen/xLarge"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/adopt"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintVertical_bias="0.4" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="No hay entradas"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/ivImage" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvPostUser"
@@ -69,7 +107,7 @@
                     android:orientation="horizontal"
                     app:carousel_alignment="center"
                     app:layoutManager="com.google.android.material.carousel.CarouselLayoutManager"
-                    app:layout_constraintTop_toBottomOf="@+id/cvImage" />
+                    app:layout_constraintTop_toBottomOf="@+id/divider" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -79,12 +117,37 @@
                 android:layout_height="match_parent"
                 android:visibility="gone">
 
+                <ImageButton
+                    android:id="@+id/btnClose"
+                    style="@style/ImageButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:backgroundTint="@color/none"
+                    android:paddingStart="@dimen/none"
+                    android:src="@drawable/ic_close"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSave"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingEnd="@dimen/none"
+                    android:text="Guardar"
+                    android:textAlignment="textEnd"
+                    android:textAllCaps="true"
+                    app:backgroundTint="@color/none"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cvPhoto"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/medium"
                     app:cardCornerRadius="@dimen/xLarge"
-                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/btnSave"
                     app:strokeColor="?attr/colorOutline">
 
                     <androidx.appcompat.widget.LinearLayoutCompat
@@ -103,7 +166,7 @@
 
                             <ImageView
                                 android:id="@+id/ivNewPhoto"
-                                android:layout_width="120dp"
+                                android:layout_width="200dp"
                                 android:layout_height="120dp"
                                 android:layout_gravity="center"
                                 android:elevation="@dimen/xSmall"
@@ -145,7 +208,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/xSmall"
-                    android:enabled="false"
                     android:hint="@string/email"
                     app:layout_constraintTop_toBottomOf="@id/tilUserName">
 
@@ -159,10 +221,11 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnShow"
-                    style="@style/ThemeOverlay.Material3.Button.TextButton"
+                    style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/small"
+                    android:paddingStart="@dimen/none"
                     android:text="Mostrar"
                     android:textAlignment="textStart"
                     app:backgroundTint="@color/none"
@@ -174,7 +237,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/xSmall"
-                    android:enabled="false"
                     android:hint="Contraseña actual"
                     android:visibility="gone"
                     app:endIconMode="password_toggle"
@@ -193,7 +255,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/xSmall"
-                    android:enabled="false"
                     android:hint="Nueva contraseña"
                     android:visibility="gone"
                     app:endIconMode="password_toggle"
@@ -212,7 +273,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/xSmall"
-                    android:enabled="false"
                     android:hint="@string/confirm"
                     android:visibility="gone"
                     app:endIconMode="password_toggle"
@@ -225,19 +285,6 @@
                         android:layout_marginBottom="@dimen/small"
                         android:inputType="textPassword" />
                 </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSave"
-                    style="@style/ThemeOverlay.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/small"
-                    android:text="Guardar"
-                    android:textAlignment="textEnd"
-                    android:textAllCaps="true"
-                    app:backgroundTint="@color/none"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tilConfirm" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 

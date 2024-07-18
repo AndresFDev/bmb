@@ -1,4 +1,4 @@
-package com.example.bmb.models;
+package com.example.bmb.data.models;
 
 
 public class PostModel {
