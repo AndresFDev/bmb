@@ -1,5 +1,6 @@
 package com.example.bmb.ui;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
@@ -18,12 +19,18 @@ import androidx.core.content.ContextCompat;
 import com.example.bmb.data.ImageManager;
 import com.example.bmb.R;
 import com.example.bmb.auth.AuthManager;
+import com.example.bmb.utils.ProgressUtils;
+import com.example.bmb.utils.TextInputHelper;
+import com.example.bmb.utils.TextInputValidator;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -36,9 +43,10 @@ import java.util.Map;
 
 public class LoginActivity extends AppCompatActivity {
 
+    private AuthManager authManager;
     private ImageManager imageManager;
     private Bitmap selectedBitmap;
-    private MaterialButton btnPhoto, btnEnter, btnRegister, btnSignUp;
+    private MaterialButton btnForgotPassword, btnPhoto, btnEnter, btnRegister, btnSignUp;
     private TextInputLayout tilUserName, tilEmail, tilPassword, tilConfirm;
     private TextInputEditText etUserName, etEmail, etPassword, etConfirm;
     private ExtendedFloatingActionButton btnGoogle;
@@ -46,7 +54,6 @@ public class LoginActivity extends AppCompatActivity {
     private MaterialCardView cvPhoto;
     private ImageView imgLogo, ivPhoto;
     private FirebaseAuth.AuthStateListener mAuthListener;
-
     private static FirebaseAuth mAuth;
     private static final int RC_SIGN_IN = 9001;
 
@@ -56,34 +63,60 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         mAuth = FirebaseAuth.getInstance();
+        authManager = new AuthManager(this);
+        imageManager = new ImageManager(this);
+        ProgressUtils.initProgress(this, findViewById(android.R.id.content));
 
-        mAuthListener = firebaseAuth -> {
-            FirebaseUser user = firebaseAuth.getCurrentUser();
-            if (user != null) {
-                AuthManager authManager = new AuthManager(this);
-                authManager.fetchUserData(user, new AuthManager.OnUserDataFetchListener() {
-                    @Override
-                    public void onSuccess(Map<String, Object> userData) {
-                        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                        intent.putExtra("userData", new HashMap<>(userData));
-                        startActivity(intent);
-                        finish();
-                    }
+        mAuthListener = this::handleAuthStateChange;
 
-                    @Override
-                    public void onFailure(String errorMessage) {
-                        Toast.makeText(LoginActivity.this, "Error al obtener datos del usuario: " + errorMessage, Toast.LENGTH_SHORT).show();
-                    }
-                });
-            } else {
-                imageManager = new ImageManager(this);
-                setupUI();
-                setupButtonClickListeners();
-            }
-        };
+        setupUI();
+        setupButtonClickListeners();
     }
 
+    private void handleAuthStateChange(@NonNull FirebaseAuth firebaseAuth) {
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+        if (user != null) {
+            fetchUserData(user);
+        } else {
+            setupUIForSignIn();
+        }
+    }
+
+    private void fetchUserData(FirebaseUser user) {
+        AuthManager authManager = new AuthManager(this);
+        ProgressUtils.showProgress();
+        authManager.fetchUserData(user, new AuthManager.OnUserDataFetchListener() {
+            @Override
+            public void onSuccess(Map<String, Object> userData) {
+                ProgressUtils.hideProgress();
+                Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                intent.putExtra("userData", new HashMap<>(userData));
+                startActivity(intent);
+                finish();
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                ProgressUtils.hideProgress();
+                Toast.makeText(LoginActivity.this, "Error al obtener datos del usuario: " + errorMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void setupUIForSignIn() {
+        cvPhoto.setVisibility(View.GONE);
+        tilUserName.setVisibility(View.GONE);
+        tilConfirm.setVisibility(View.GONE);
+        msgReg1.setText(R.string.msgReg1);
+        msgReg2.setText(R.string.optionLogin);
+        btnRegister.setVisibility(View.GONE);
+        btnEnter.setVisibility(View.VISIBLE);
+        btnSignUp.setText(R.string.signUp);
+    }
+
+
     private void setupUI() {
+        btnForgotPassword = findViewById(R.id.btnForgotPassword);
         cvPhoto = findViewById(R.id.cvPhoto);
         ivPhoto = findViewById(R.id.ivPhoto);
         btnPhoto = findViewById(R.id.btnPhoto);
@@ -104,49 +137,56 @@ public class LoginActivity extends AppCompatActivity {
         msgReg1 = findViewById(R.id.msgReg1);
         msgReg2 = findViewById(R.id.msgReg2);
 
-        // Configurar colores
         tvNameLogo.setTextColor(ContextCompat.getColor(this, R.color.bgColor));
 
-        // Configurar TextChangedListeners para validar campos de entrada
         setupTextChangeListeners();
     }
 
     private void setupTextChangeListeners() {
-        etUserName.addTextChangedListener(createTextWatcher(tilUserName));
-        etEmail.addTextChangedListener(createTextWatcher(tilEmail));
-        etPassword.addTextChangedListener(createTextWatcher(tilPassword));
-        etConfirm.addTextChangedListener(createTextWatcher(tilConfirm));
+        TextInputHelper.setupTextChangeListener(etUserName, tilUserName);
+        TextInputHelper.setupTextChangeListener(etEmail, tilEmail);
+        TextInputHelper.setupTextChangeListener(etPassword, tilPassword);
+        TextInputHelper.setupTextChangeListener(etConfirm, tilConfirm);
     }
-
-    private TextWatcher createTextWatcher(TextInputLayout inputLayout) {
-        return new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                // No necesario
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (!s.toString().isEmpty()) {
-                    inputLayout.setErrorEnabled(false);
-                    inputLayout.setError(null);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                // No necesario
-            }
-        };
-    }
-
 
     private void setupButtonClickListeners() {
+        btnForgotPassword.setOnClickListener(v -> showForgotPasswordDialog());
         btnPhoto.setOnClickListener(v -> selectPhoto());
         btnEnter.setOnClickListener(v -> signInWithEmail());
         btnRegister.setOnClickListener(v -> signUpWithEmail());
         btnSignUp.setOnClickListener(v -> toggleSignUpView());
         btnGoogle.setOnClickListener(v -> signInWithGoogle());
+    }
+
+    private void showForgotPasswordDialog() {
+        TextInputLayout tilEmailReset = new TextInputLayout(this);
+        tilEmailReset.setHint("Correo Electrónico");
+        TextInputEditText etEmailReset = new TextInputEditText(this);
+        tilEmailReset.setPadding(32, 8, 32, 8);
+        tilEmailReset.addView(etEmailReset);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Recuperar Contraseña")
+                .setView(tilEmailReset)
+                .setPositiveButton("Enviar", (dialog, which) -> sendPasswordResetEmail(etEmailReset.getText().toString()))
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void sendPasswordResetEmail(String email) {
+        if (email.isEmpty()) {
+            Toast.makeText(this, "Por favor, ingrese su correo electrónico", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        mAuth.sendPasswordResetEmail(email)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Toast.makeText(LoginActivity.this, "Correo de recuperación enviado", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(LoginActivity.this, "Error al enviar correo de recuperación", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void selectPhoto() {
@@ -156,34 +196,23 @@ public class LoginActivity extends AppCompatActivity {
     private void signInWithEmail() {
         String email = etEmail.getText().toString();
         String password = etPassword.getText().toString();
-        boolean isValid = true;
 
-        if (email.isEmpty() && password.isEmpty()) {
-            tilEmail.setErrorEnabled(true);
-            tilPassword.setErrorEnabled(true);
-            tilEmail.setError("Campo vacío");
-            tilPassword.setError("Campo vacío");
-            Toast.makeText(this, "Por favor, rellena todos los campos", Toast.LENGTH_SHORT).show();
-            isValid = false;
-        } else if (email.isEmpty()) {
-            tilEmail.setErrorEnabled(true);
-            tilEmail.setError("Por favor, ingrese su correo electrónico");
-            isValid = false;
-        } else if (password.isEmpty()) {
-            tilPassword.setErrorEnabled(true);
-            tilPassword.setError("Por favor, ingrese su contraseña");
-            isValid = false;
-        } else if (!email.contains("@") || !email.contains(".com")) {
-            tilEmail.setError("Correo electrónico no válido");
-            isValid = false;
-        } else if (password.length() < 8) {
-            tilPassword.setError("La contraseña debe tener al menos 8 caracteres");
-            isValid = false;
-        }
-
-        if (isValid) {
+        if (validateSignInFields(email, password)) {
+            ProgressUtils.showProgress();
             AuthManager authManager = new AuthManager(this);
-            authManager.signInWithEmail(email, password, mAuthListener);
+            authManager.signInWithEmail(email, password, new AuthManager.OnSignInListener() {
+                @Override
+                public void onSignInSuccess(FirebaseUser user) {
+                    ProgressUtils.hideProgress();
+                    handleAuthStateChange(mAuth);
+                }
+
+                @Override
+                public void onSignInFailure(String errorMessage) {
+                    ProgressUtils.hideProgress();
+                    Toast.makeText(LoginActivity.this, "Error al iniciar sesión: " + errorMessage, Toast.LENGTH_SHORT).show();
+                }
+            });
         }
     }
 
@@ -192,56 +221,54 @@ public class LoginActivity extends AppCompatActivity {
         String userName = etUserName.getText().toString();
         String email = etEmail.getText().toString();
         String password = etPassword.getText().toString();
-        String confirmPassword = etConfirm.getText().toString();
+        String confirm = etConfirm.getText().toString();
 
-        boolean isValid = true;
-
-        if (userName.isEmpty() && email.isEmpty() && password.isEmpty() && confirmPassword.isEmpty()) {
-            tilUserName.setErrorEnabled(true);
-            tilEmail.setErrorEnabled(true);
-            tilPassword.setErrorEnabled(true);
-            tilConfirm.setErrorEnabled(true);
-            tilUserName.setError("Campo vacío");
-            tilEmail.setError("Campo vacío");
-            tilPassword.setError("Campo vacío");
-            tilConfirm.setError("Campo vacío");
-            Toast.makeText(this, "Por favor, rellena todos los campos", Toast.LENGTH_SHORT).show();
-            isValid = false;
-        } else if (userName.isEmpty()) {
-            tilUserName.setErrorEnabled(true);
-            tilUserName.setError("Falta el nombre de usuario");
-            isValid = false;
-        } else if (email.isEmpty()) {
-            tilEmail.setErrorEnabled(true);
-            tilEmail.setError("Por favor, ingrese su correo electrónico");
-            isValid = false;
-        } else if (!email.contains("@") || !email.contains(".com")) {
-            tilEmail.setErrorEnabled(true);
-            tilEmail.setError("Por favor, ingrese un correo electrónico válido");
-            isValid = false;
-        } else if (password.isEmpty()) {
-            tilPassword.setErrorEnabled(true);
-            tilPassword.setError("Por favor, ingrese su contraseña");
-            isValid = false;
-        } else if (password.length() < 8) {
-            tilPassword.setErrorEnabled(true);
-            tilPassword.setError("La contraseña debe tener al menos 8 caracteres");
-            isValid = false;
-        } else if (confirmPassword.isEmpty()) {
-            tilConfirm.setErrorEnabled(true);
-            tilConfirm.setError("Confirme su contraseña");
-            isValid = false;
-        } else if (!confirmPassword.equals(password)) {
-            tilConfirm.setErrorEnabled(true);
-            tilConfirm.setError("Las contraseñas no coinciden");
-            isValid = false;
-        }
-
-        if (isValid) {
+        if (validateSignUpFields(userName, email, password, confirm)) {
+            ProgressUtils.showProgress();
             AuthManager authManager = new AuthManager(this);
-            authManager.signUpWithEmail(userPhoto, userName, email, password, mAuthListener);
-        }
+            authManager.signUpWithEmail(userPhoto, userName, email, password, new AuthManager.OnSignUpListener() {
+                @Override
+                public void onSignUpSuccess(FirebaseUser user) {
+                    ProgressUtils.hideProgress();
+                    Toast.makeText(LoginActivity.this, "Registro exitoso", Toast.LENGTH_SHORT).show();
+                    handleAuthStateChange(mAuth);
+                }
 
+                @Override
+                public void onSignUpFailure(String errorMessage) {
+                    ProgressUtils.hideProgress();
+                    Toast.makeText(LoginActivity.this, "Error al registrar: " + errorMessage, Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
+    private boolean validateSignInFields(String email, String password) {
+        boolean valid = true;
+        if (!TextInputValidator.isValidEmail(etEmail, tilEmail)) {
+            valid = false;
+        }
+        if (!TextInputValidator.isValidPassword(etPassword, tilPassword)) {
+            valid = false;
+        }
+        return valid;
+    }
+
+    private boolean validateSignUpFields(String userName, String email, String password, String confirm) {
+        boolean valid = true;
+        if (!TextInputValidator.isValidUsername(etUserName, tilUserName)) {
+            valid = false;
+        }
+        if (!TextInputValidator.isValidEmail(etEmail, tilEmail)) {
+            valid = false;
+        }
+        if (!TextInputValidator.isValidPassword(etPassword, tilPassword)) {
+            valid = false;
+        }
+        if (!TextInputValidator.doPasswordsMatch(etPassword, etConfirm, tilPassword, tilConfirm)) {
+            valid = false;
+        }
+        return valid;
     }
 
     private void toggleSignUpView() {
@@ -250,8 +277,9 @@ public class LoginActivity extends AppCompatActivity {
             cvPhoto.setVisibility(View.VISIBLE);
             tilUserName.setVisibility(View.VISIBLE);
             tilConfirm.setVisibility(View.VISIBLE);
-            msgReg1.setText(R.string.msgReg1);
-            msgReg2.setText(R.string.login);
+            btnForgotPassword.setVisibility(View.GONE);
+            msgReg1.setText(R.string.msgReg1_v);
+            msgReg2.setText(R.string.msgReg2_r);
             btnRegister.setVisibility(View.VISIBLE);
             btnEnter.setVisibility(View.GONE);
             btnSignUp.setText(R.string.login);
@@ -259,7 +287,8 @@ public class LoginActivity extends AppCompatActivity {
             cvPhoto.setVisibility(View.GONE);
             tilUserName.setVisibility(View.GONE);
             tilConfirm.setVisibility(View.GONE);
-            msgReg1.setText(R.string.msgReg1_v);
+            btnForgotPassword.setVisibility(View.VISIBLE);
+            msgReg1.setText(R.string.msgReg1);
             msgReg2.setText(R.string.optionLogin);
             btnRegister.setVisibility(View.GONE);
             btnEnter.setVisibility(View.VISIBLE);
@@ -268,8 +297,47 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void signInWithGoogle() {
-        AuthManager authManager = new AuthManager(this);
-        authManager.signInWithGoogle();
+        GoogleSignInClient googleSignInClient = authManager.configureGoogleSignIn();
+        Intent signInIntent = googleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, RC_SIGN_IN);
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == RC_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            handleSignInResult(task);
+        }
+
+        imageManager.onImageSelected(requestCode, resultCode, data, bitmap -> {
+            selectedBitmap = bitmap;
+            ivPhoto.setImageBitmap(bitmap);
+        }, e -> Toast.makeText(LoginActivity.this, "Error al seleccionar la imagen: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
+        try {
+            GoogleSignInAccount account = completedTask.getResult(ApiException.class);
+            AuthManager authManager = new AuthManager(this);
+            ProgressUtils.showProgress();
+            authManager.signInWithGoogle(account, new AuthManager.OnSignInListener() {
+                @Override
+                public void onSignInSuccess(FirebaseUser user) {
+                    ProgressUtils.hideProgress();
+                    handleAuthStateChange(mAuth);
+                }
+
+                @Override
+                public void onSignInFailure(String errorMessage) {
+                    ProgressUtils.hideProgress();
+                    Toast.makeText(LoginActivity.this, "Error al iniciar sesión con Google: " + errorMessage, Toast.LENGTH_SHORT).show();
+                }
+            });
+        } catch (ApiException e) {
+            Log.w("LoginActivity", "signInResult:failed code=" + e.getStatusCode());
+            Toast.makeText(this, "Error al iniciar sesión con Google", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
@@ -278,46 +346,15 @@ public class LoginActivity extends AppCompatActivity {
         imageManager.onRequestPermissionsResult(requestCode, grantResults, null);
     }
 
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == RC_SIGN_IN) {
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            try {
-                GoogleSignInAccount account = task.getResult(ApiException.class);
-                AuthManager authManager = new AuthManager(this);
-                authManager.firebaseAuthWithGoogle(account.getIdToken(), mAuthListener);
-            } catch (ApiException e) {
-                Log.w("GoogleSignIn", "Fallo en el inicio de sesión con Google", e);
-                Toast.makeText(this, "Error al iniciar sesión con Google: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        }
-
-        imageManager.onImageSelected(requestCode, resultCode, data, bitmap -> {
-            selectedBitmap = bitmap;
-            ivPhoto.setImageBitmap(bitmap);
-        }, e -> Toast.makeText(LoginActivity.this, "Error al seleccionar la imagen: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-
-    }
-
-    private void goToMainActivity() {
-        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-        startActivity(intent);
-        finish();
-    }
-
     @Override
     protected void onStart() {
         super.onStart();
-        // Agregar el AuthStateListener al inicio de la actividad
         mAuth.addAuthStateListener(mAuthListener);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        // Remover el AuthStateListener al detener la actividad para evitar fugas de memoria
         if (mAuthListener != null) {
             mAuth.removeAuthStateListener(mAuthListener);
         }

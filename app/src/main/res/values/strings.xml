@@ -24,6 +24,6 @@
     <string name="google">Google</string>
     <string name="msgReg1">También puedes iniciar sesión con</string>
     <string name="msgReg1_v">También puedes registrarte con</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="msgReg2_r">Si ya estas registrado Inicia Sesion</string>
+    <string name="forgotPass">¿Olvidaste tu contraseña?</string>
 </resources>

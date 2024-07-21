@@ -29,6 +29,7 @@ import com.example.bmb.ui.main.ProfileFragment;
 import com.example.bmb.R;
 import com.example.bmb.ui.main.VetsFragment;
 import com.example.bmb.auth.AuthManager;
+import com.example.bmb.utils.KeyboardVisibilityHelper;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.textview.MaterialTextView;
@@ -37,7 +38,7 @@ import com.google.firebase.auth.FirebaseUser;
 
 import java.util.Map;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements KeyboardVisibilityHelper.OnKeyboardVisibilityListener {
 
     private BottomNavigationView bottomNavigation;
     private MaterialToolbar topAppBar;
@@ -45,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageView ivUser;
     private MaterialTextView tvUserName;
     private LinearLayout llUser;
-    private boolean isKeyboardVisible = false;
+    private KeyboardVisibilityHelper keyboardVisibilityHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,7 +86,18 @@ public class MainActivity extends AppCompatActivity {
             replaceFragment(new HomeFragment());
         }
 
+        keyboardVisibilityHelper = new KeyboardVisibilityHelper(this, findViewById(android.R.id.content), this);
+
         setupListeners();
+    }
+
+    @Override
+    public void onKeyboardVisibilityChanged(boolean isVisible) {
+        if (isVisible) {
+            bottomNavigation.setVisibility(View.GONE);
+        } else {
+            bottomNavigation.setVisibility(View.VISIBLE);
+        }
     }
 
     private void setupListeners() {
@@ -125,7 +137,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (itemId == R.id.add) {
             item.setIcon(R.drawable.ic_add_selected);
-            setupKeyboardVisibilityListener();
             selectedFragment = new AddPostFragment();
         } else if (itemId == R.id.favorite) {
             item.setIcon(R.drawable.ic_favorite_selected);
@@ -220,34 +231,6 @@ public class MainActivity extends AppCompatActivity {
     private void signOut() {
         AuthManager authManager = new AuthManager(this);
         authManager.signOut();
-    }
-
-    private void setupKeyboardVisibilityListener() {
-        final View rootView = findViewById(android.R.id.content);
-        final InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-
-        rootView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
-            Rect r = new Rect();
-            rootView.getWindowVisibleDisplayFrame(r);
-            int screenHeight = rootView.getHeight();
-            int keypadHeight = screenHeight - r.bottom;
-
-            boolean isKeyboardOpen = imm.isAcceptingText();
-
-            if (isKeyboardOpen) {
-                hideBottomNavigationView();
-            } else {
-                showBottomNavigationView();
-            }
-        });
-    }
-
-    private void hideBottomNavigationView() {
-        bottomNavigation.setVisibility(View.GONE);
-    }
-
-    private void showBottomNavigationView() {
-        bottomNavigation.setVisibility(View.VISIBLE);
     }
 
     private void setupRecyclerViewScrollListener(RecyclerView rvHome) {

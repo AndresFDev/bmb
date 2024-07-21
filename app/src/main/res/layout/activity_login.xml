@@ -129,6 +129,14 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnForgotPassword"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/forgotPass" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilConfirm"
             android:layout_width="match_parent"
@@ -150,7 +158,6 @@
             android:id="@+id/btnEnter"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginVertical="@dimen/xSmall"
             android:text="@string/enter"
             android:textAllCaps="true"
             app:elevation="@dimen/xSmall"

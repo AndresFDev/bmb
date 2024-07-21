@@ -14,8 +14,10 @@ import android.view.ViewGroup;
 import com.example.bmb.R;
 import com.example.bmb.adapters.PostAdapter;
 import com.example.bmb.data.models.PostModel;
+import com.example.bmb.utils.ProgressUtils;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +37,7 @@ public class HomeFragment extends Fragment {
         postAdapter = new PostAdapter(postModelList);
         rvHome.setAdapter(postAdapter);
 
+        ProgressUtils.initProgress(getContext(), view.findViewById(android.R.id.content));
 
         loadPosts();
 
@@ -42,8 +45,10 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadPosts() {
+        ProgressUtils.showProgress();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.collection("posts")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     for (DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
@@ -60,8 +65,10 @@ public class HomeFragment extends Fragment {
                         postModelList.add(post);
                     }
                     postAdapter.notifyDataSetChanged();
+                    ProgressUtils.hideProgress();
                 })
                 .addOnFailureListener(e -> {
+                    ProgressUtils.hideProgress();
                     Log.e("HomeFragment", "Error al cargar publicaciones", e);
                 });
     }

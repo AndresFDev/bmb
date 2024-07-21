@@ -23,8 +23,6 @@ import java.util.Map;
 @SuppressLint("CustomSplashScreen")
 public class SplashActivity extends AppCompatActivity {
 
-    private ImageView imgLogo;
-    private MaterialTextView tvNameLogo, tvSlogan;
     private static FirebaseAuth mAuth;
 
 
@@ -36,44 +34,47 @@ public class SplashActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_splash);
 
-        imgLogo = findViewById(R.id.imgLogo);
-        tvNameLogo = findViewById(R.id.tvNameLogo);
-        tvSlogan = findViewById(R.id.tvSlogan);
-
         mAuth = FirebaseAuth.getInstance();
 
+        checkNetworkAndProceed();
+
+    }
+
+    private void checkNetworkAndProceed() {
         if (NetworkUtils.isNetworkAvailable(this)) {
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    FirebaseUser user = mAuth.getCurrentUser();
+            proceedWithLogin();
+        } else {
+            NetworkUtils.showNoInternetDialog(this, (dialog, which) -> {
+                checkNetworkAndProceed();
+            });
+        }
+    }
 
-                    if (user != null) {
-                        AuthManager authManager = new AuthManager(SplashActivity.this);
-                        authManager.fetchUserData(user, new AuthManager.OnUserDataFetchListener() {
-                            @Override
-                            public void onSuccess(Map<String, Object> userData) {
-                                Intent intent = new Intent(SplashActivity.this, MainActivity.class);
-                                intent.putExtra("userData", new HashMap<>(userData));
-                                startActivity(intent);
-                                finish();
-                            }
+    private void proceedWithLogin() {
+        new Handler().postDelayed(() -> {
+            FirebaseUser user = mAuth.getCurrentUser();
 
-                            @Override
-                            public void onFailure(String errorMessage) {
-                                Toast.makeText(SplashActivity.this, "Error al obtener datos del usuario: " + errorMessage, Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    } else {
-                        Intent intent = new Intent(SplashActivity.this, LoginActivity.class);
+            if (user != null) {
+                AuthManager authManager = new AuthManager(SplashActivity.this);
+                authManager.fetchUserData(user, new AuthManager.OnUserDataFetchListener() {
+                    @Override
+                    public void onSuccess(Map<String, Object> userData) {
+                        Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+                        intent.putExtra("userData", new HashMap<>(userData));
                         startActivity(intent);
                         finish();
                     }
-                }
-            }, SPLASH_DELAY);
-        } else {
-            NetworkUtils.showNoInternetDialog(this);
-        }
 
+                    @Override
+                    public void onFailure(String errorMessage) {
+                        Toast.makeText(SplashActivity.this, "Error al obtener datos del usuario: " + errorMessage, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } else {
+                Intent intent = new Intent(SplashActivity.this, LoginActivity.class);
+                startActivity(intent);
+                finish();
+            }
+        }, SPLASH_DELAY);
     }
 }

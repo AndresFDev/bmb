@@ -14,11 +14,10 @@ public class ProgressUtils {
     private static FrameLayout progressContainer;
     private static CircularProgressIndicator progressIndicator;
 
-    // Método estático para inicializar el ProgressIndicator
     public static void initProgress(Context context, ViewGroup rootView) {
         progressContainer = new FrameLayout(context);
         progressContainer.setBackgroundColor(ContextCompat.getColor(context, android.R.color.black));
-        progressContainer.getBackground().setAlpha(128); // Ajusta la opacidad del fondo
+        progressContainer.getBackground().setAlpha(220);
 
         progressIndicator = new CircularProgressIndicator(context);
         progressIndicator.setIndeterminate(true);
@@ -51,7 +50,6 @@ public class ProgressUtils {
         }
     }
 
-    // Método estático para ocultar el ProgressIndicator
     public static void hideProgress() {
         if (progressContainer != null) {
             progressContainer.setVisibility(View.GONE);

@@ -19,16 +19,11 @@ public class NetworkUtils {
         return false;
     }
 
-    public static void showNoInternetDialog(Context context) {
+    public static void showNoInternetDialog(Context context, DialogInterface.OnClickListener retryListener) {
         new MaterialAlertDialogBuilder(context)
                 .setTitle("Sin Conexión")
                 .setMessage("No hay conexión a Internet. Por favor, verifica tu conexión y vuelve a intentarlo.")
-                .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                })
+                .setPositiveButton("Reintentar", retryListener)
                 .setCancelable(false)
                 .show();
     }

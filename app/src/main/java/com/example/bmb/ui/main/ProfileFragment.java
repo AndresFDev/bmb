@@ -3,6 +3,7 @@ package com.example.bmb.ui.main;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Bundle;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -16,6 +17,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.provider.MediaStore;
+import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.util.Log;
@@ -29,12 +31,14 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.example.bmb.R;
+import com.example.bmb.auth.AuthManager;
 import com.example.bmb.utils.ProgressUtils;
-import com.example.bmb.utils.StrokeSpan;
 import com.example.bmb.adapters.PostUserAdapter;
 import com.example.bmb.data.ImageManager;
 import com.example.bmb.data.models.ProfileViewModel;
 import com.example.bmb.ui.LoginActivity;
+import com.example.bmb.utils.StrokeTextView;
+import com.example.bmb.utils.TextInputValidator;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.carousel.CarouselLayoutManager;
@@ -56,11 +60,12 @@ import java.util.Map;
 
 public class ProfileFragment extends Fragment {
 
+    private AuthManager authManager;
     private FirebaseFirestore db;
     private ConstraintLayout clEmpty;
     private ImageView ivPhoto, ivNewPhoto;
     private ImageButton btnUserSettings, btnClose;
-    private MaterialTextView tvUserName;
+    private StrokeTextView tvUserName;
     private ConstraintLayout clTopDataUser, clEditUser;
     private TextInputLayout tilEmail, tilPassword, tilNewPassword, tilConfirm;
     private TextInputEditText etUserName, etEmail, etPassword, etNewPassword, etConfirm;
@@ -75,6 +80,7 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        authManager = new AuthManager(getContext());
         db = FirebaseFirestore.getInstance();
         profileViewModel = new ViewModelProvider(this).get(ProfileViewModel.class);
         imageManager = new ImageManager(getActivity());
@@ -99,6 +105,7 @@ public class ProfileFragment extends Fragment {
         setupRecyclerView();
         setupButtonListeners();
         ProgressUtils.initProgress(getContext(), (ViewGroup) view);
+        togglePasswordFieldsVisibility();
         return view;
     }
 
@@ -170,12 +177,54 @@ public class ProfileFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        profileViewModel.getCurrentUser().observe(getViewLifecycleOwner(), this::updateUI);
+        profileViewModel.getCurrentUser().observe(getViewLifecycleOwner(), currentUser -> {
+            if (currentUser != null) {
+                profileViewModel.getUserData().observe(getViewLifecycleOwner(), userData -> {
+                    updateUI(currentUser, userData);
+                });
+            } else {
+                ProgressUtils.hideProgress();
+            }
+        });
     }
 
-    private void updateUI(FirebaseUser currentUser) {
+    private void updateUI(FirebaseUser currentUser, Map<String, Object> userData) {
         ProgressUtils.showProgress();
-        if (currentUser == null) return;
+
+        if (userData != null) {
+            String userPhotoUrl = (String) userData.get("userPhoto");
+            String userName = (String) userData.get("name");
+            String userEmail = (String) userData.get("email");
+
+            if (userName == null) {
+                userName = "";
+            }
+
+            tvUserName.setText(userName);
+            etUserName.setText(userName);
+            etEmail.setText(userEmail);
+
+            Glide.with(requireContext())
+                    .load(userPhotoUrl)
+                    .placeholder(R.drawable.ic_user_photo)
+                    .error(R.drawable.ic_user_photo)
+                    .into(ivPhoto);
+
+            Glide.with(requireContext())
+                    .load(userPhotoUrl)
+                    .placeholder(R.drawable.ic_user_photo)
+                    .error(R.drawable.ic_user_photo)
+                    .into(ivNewPhoto);
+
+            ProgressUtils.hideProgress();
+            return;
+        }
+
+        if (currentUser == null) {
+            Log.e("ProfileFragment", "currentUser es null.");
+            ProgressUtils.hideProgress();
+            return;
+        }
 
         db.collection("users").document(currentUser.getUid())
                 .get()
@@ -184,13 +233,11 @@ public class ProfileFragment extends Fragment {
                         String userPhotoUrl = documentSnapshot.getString("userPhoto");
                         String userName = documentSnapshot.getString("name");
 
-                        SpannableString spannableString = new SpannableString(userName);
-                        StrokeSpan strokeSpan = StrokeSpan.createFromTheme(requireContext(), R.style.UserNameTitle, 5);
-                        spannableString.setSpan(strokeSpan, 0, userName.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        if (userName == null) {
+                            userName = "";
+                        }
 
-                        tvUserName.setText(spannableString);
-
-
+                        tvUserName.setText(userName);
                         etUserName.setText(userName);
                         etEmail.setText(currentUser.getEmail());
 
@@ -215,6 +262,7 @@ public class ProfileFragment extends Fragment {
                     Log.e("ProfileFragment", "Error al obtener datos del usuario: " + e.getMessage());
                 });
     }
+
 
     private void togglePasswordFieldsVisibility() {
         arePasswordFieldsVisible = !arePasswordFieldsVisible;
@@ -266,9 +314,6 @@ public class ProfileFragment extends Fragment {
         deleteUser.setIconTint(ColorStateList.valueOf(getResources().getColor(com.google.android.material.R.color.design_default_color_error)));
         deleteUser.setTextColor(getResources().getColor(com.google.android.material.R.color.design_default_color_error));
 
-        bottomSheetContent.addView(editUser);
-        bottomSheetContent.addView(deleteUser);
-
         bottomSheetDialog.setContentView(sheetView);
         bottomSheetDialog.show();
     }
@@ -286,11 +331,7 @@ public class ProfileFragment extends Fragment {
     }
 
     private void updateUser() {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null) return;
-
         ProgressUtils.showProgress();
-
         String name = etUserName.getText().toString().trim();
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
@@ -298,8 +339,30 @@ public class ProfileFragment extends Fragment {
         String confirm = etConfirm.getText().toString().trim();
 
         boolean isGoogleUser = isCurrentUserGoogleUser();
-        boolean emailChanged = !email.equals(currentUser.getEmail());
+        boolean emailChanged = !email.equals(FirebaseAuth.getInstance().getCurrentUser().getEmail());
 
+
+        if (!TextInputValidator.isValidEmail(etEmail, tilEmail)) {
+            ProgressUtils.hideProgress();
+            return;
+        }
+
+        if (!newPassword.isEmpty() && !TextInputValidator.isValidPassword(etPassword, tilPassword)) {
+            ProgressUtils.hideProgress();
+            return;
+        }
+
+        if (!newPassword.isEmpty()) {
+            if (!TextInputValidator.isValidPassword(etNewPassword, tilNewPassword)) {
+                ProgressUtils.hideProgress();
+                return;
+            }
+
+            if (!TextInputValidator.doPasswordsMatch(etNewPassword, etConfirm, tilNewPassword, tilConfirm)) {
+                ProgressUtils.hideProgress();
+                return;
+            }
+        }
 
         if (isGoogleUser && (emailChanged || !password.isEmpty())) {
             ProgressUtils.hideProgress();
@@ -307,49 +370,70 @@ public class ProfileFragment extends Fragment {
             return;
         }
 
-        if (!isValidEmail(email)) {
-            ProgressUtils.hideProgress();
-            etEmail.setError("Correo electrónico no válido");
-            return;
-        }
+        if (isGoogleUser) {
+            authManager.updateUserData(name, selectedBitmap, null, new AuthManager.UpdateUserCallback() {
+                @Override
+                public void onSuccess() {
+                    Toast.makeText(getContext(), "Perfil actualizado correctamente.", Toast.LENGTH_SHORT).show();
+                    toggleEditUserVisibility(false);
+                    ProgressUtils.hideProgress();
+                }
 
-        if (!newPassword.isEmpty() && !isValidPassword(newPassword)) {
-            ProgressUtils.hideProgress();
-            etNewPassword.setError("La contraseña debe tener al menos 8 caracteres y contener una letra y un número.");
-            return;
-        }
-
-        if (isGoogleUser && newPassword.isEmpty()) {
-            saveUserProfileData(currentUser, name);
-            ProgressUtils.hideProgress();
+                @Override
+                public void onFailure(Exception e) {
+                    Toast.makeText(getContext(), "Error al actualizar el perfil: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    ProgressUtils.hideProgress();
+                }
+            });
         } else if (!newPassword.isEmpty()) {
             if (newPassword.equals(confirm)) {
-                reauthenticateUserAndSaveData(currentUser, password, name, newPassword);
+                reauthenticateUserAndSaveData(password, name, newPassword);
             } else {
                 Toast.makeText(getContext(), "Las contraseñas no coinciden.", Toast.LENGTH_SHORT).show();
                 ProgressUtils.hideProgress();
             }
         } else {
-            saveUserProfileData(currentUser, name);
-            ProgressUtils.hideProgress();
+            authManager.updateUserData(name, selectedBitmap, null, new AuthManager.UpdateUserCallback() {
+                @Override
+                public void onSuccess() {
+                    Toast.makeText(getContext(), "Perfil actualizado correctamente.", Toast.LENGTH_SHORT).show();
+                    toggleEditUserVisibility(false);
+                    ProgressUtils.hideProgress();
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    Toast.makeText(getContext(), "Error al actualizar el perfil: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    ProgressUtils.hideProgress();
+                }
+            });
         }
     }
 
-    private boolean isValidEmail(String email) {
-        return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches();
-    }
-
-    private boolean isValidPassword(String password) {
-        String passwordPattern = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$";
-        return password.matches(passwordPattern);
-    }
-
-    private void reauthenticateUserAndSaveData(FirebaseUser currentUser, String password, String name, String newPassword) {
+    private void reauthenticateUserAndSaveData(String password, String name, String newPassword) {
+        ProgressUtils.showProgress();
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         AuthCredential credential = EmailAuthProvider.getCredential(currentUser.getEmail(), password);
+
         currentUser.reauthenticate(credential)
                 .addOnSuccessListener(aVoid -> {
                     currentUser.updatePassword(newPassword)
-                            .addOnSuccessListener(aVoid1 -> saveUserProfileData(currentUser, name))
+                            .addOnSuccessListener(aVoid1 -> {
+                                authManager.updateUserData(name, selectedBitmap, newPassword, new AuthManager.UpdateUserCallback() {
+                                    @Override
+                                    public void onSuccess() {
+                                        Toast.makeText(getContext(), "Perfil actualizado correctamente.", Toast.LENGTH_SHORT).show();
+                                        toggleEditUserVisibility(false);
+                                        ProgressUtils.hideProgress();
+                                    }
+
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        Toast.makeText(getContext(), "Error al actualizar el perfil: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                        ProgressUtils.hideProgress();
+                                    }
+                                });
+                            })
                             .addOnFailureListener(e -> {
                                 ProgressUtils.hideProgress();
                                 Toast.makeText(getContext(), "Error al actualizar la contraseña: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -361,51 +445,22 @@ public class ProfileFragment extends Fragment {
                 });
     }
 
-    private void saveUserProfileData(FirebaseUser currentUser, String name) {
-        String userId = currentUser.getUid();
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("name", name);
-
-        if (selectedBitmap != null) {
-            ImageManager imgManager = new ImageManager(getContext());
-            imgManager.uploadImageToFirebase(selectedBitmap, imageUrl -> {
-                userData.put("userPhoto", imageUrl);
-                updateUserData(userId, userData);
-            }, e -> Toast.makeText(getContext(), "Error al subir la imagen: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-        } else {
-            updateUserData(userId, userData);
-        }
-    }
-
-    private void updateUserData(String userId, Map<String, Object> userData) {
-        FirebaseFirestore.getInstance().collection("users").document(userId)
-                .update(userData)
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(getContext(), "Perfil actualizado correctamente.", Toast.LENGTH_SHORT).show();
-                    toggleEditUserVisibility(false);
-                })
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al actualizar el perfil: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-    }
-
     private void deleteUserAccount() {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null) return;
-
         ProgressUtils.showProgress();
+        authManager.deleteUser(new AuthManager.DeleteUserCallback() {
+            @Override
+            public void onSuccess() {
+                ProgressUtils.hideProgress();
+                Toast.makeText(getContext(), "Cuenta eliminada correctamente.", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(getContext(), LoginActivity.class));
+                getActivity().finish();
+            }
 
-        FirebaseFirestore.getInstance().collection("users").document(currentUser.getUid())
-                .delete()
-                .addOnSuccessListener(aVoid -> currentUser.delete()
-                        .addOnSuccessListener(aVoid1 -> {
-                            ProgressUtils.hideProgress();
-                            Toast.makeText(getContext(), "Cuenta eliminada correctamente.", Toast.LENGTH_SHORT).show();
-                            startActivity(new Intent(getContext(), LoginActivity.class));
-                            getActivity().finish();
-                        })
-                        .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al eliminar la cuenta: " + e.getMessage(), Toast.LENGTH_SHORT).show()))
-                .addOnFailureListener(e -> {
-                    ProgressUtils.hideProgress();
-                    Toast.makeText(getContext(), "Error al eliminar los datos del usuario: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+            @Override
+            public void onFailure(String errorMessage) {
+                ProgressUtils.hideProgress();
+                Toast.makeText(getContext(), "Error al eliminar la cuenta: " + errorMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

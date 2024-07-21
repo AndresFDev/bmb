@@ -41,7 +41,7 @@ public class AddPostFragment extends Fragment {
     private ImageManager imageManager;
     private Bitmap selectedBitmap;
     private ActivityResultLauncher<String> imagePickerLauncher;
-    private String postId;
+    private String postId, currentImageUrl;
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,15 +55,15 @@ public class AddPostFragment extends Fragment {
                         try {
                             Bitmap bitmap = MediaStore.Images.Media.getBitmap(requireActivity().getContentResolver(), uri);
                             selectedBitmap = bitmap;
-                            ivPhoto.setImageBitmap(bitmap); // Mostrar la imagen seleccionada en ImageView
+                            ivPhoto.setImageBitmap(bitmap);
                         } catch (Exception e) {
-                            Toast.makeText(getActivity(), "Error selecting image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getActivity(), "Error al seleccionar imagen: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
 
         if (getArguments() != null) {
-            postId = getArguments().getString("postId"); // Obtener el ID del post a actualizar
+            postId = getArguments().getString("postId");
         }
     }
 
@@ -84,30 +84,33 @@ public class AddPostFragment extends Fragment {
         });
 
         btnAddPost.setOnClickListener(v -> {
-            FirebaseFirestore db = FirebaseFirestore.getInstance();
-            DocumentReference newPostRef = db.collection("posts").document(); // Genera un ID único
-            String id = newPostRef.getId();
-
             String title = etTitle.getText().toString();
             String description = etDescription.getText().toString();
             String phone = etPhone.getText().toString();
             String city = etCity.getText().toString();
 
-            long timestamp = System.currentTimeMillis();
+            if (title.isEmpty() || description.isEmpty() || phone.isEmpty() || city.isEmpty()) {
+                Toast.makeText(getActivity(), "Por favor, llena todos los campos.", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
+            if (selectedBitmap == null && postId == null) {
+                Toast.makeText(getActivity(), "Por favor, selecciona una imagen.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            long timestamp = System.currentTimeMillis();
             FirebaseUser user = mAuth.getCurrentUser();
 
             if (user != null) {
                 String idUser = user.getUid();
                 if (postId != null) {
-                    // Actualizar post existente
                     updatePost(title, description, phone, city, timestamp, idUser);
                 } else {
-                    // Crear nuevo post
                     addNewPost(title, description, phone, city, timestamp, idUser);
                 }
             } else {
-                Toast.makeText(getActivity(), "User is not authenticated", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getActivity(), "Usuario no está autenticado", Toast.LENGTH_SHORT).show();
             }
 
         });
@@ -121,15 +124,14 @@ public class AddPostFragment extends Fragment {
 
     private void addNewPost(String title, String description, String phone, String city, long timestamp, String idUser) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        DocumentReference newPostRef = db.collection("posts").document(); // Genera un ID único
+        DocumentReference newPostRef = db.collection("posts").document();
         String id = newPostRef.getId();
 
         uploadImageToFirebase(selectedBitmap, imageUrl -> {
             postManager.addPost(id, imageUrl, title, description, idUser, phone, city, timestamp, new PostManager.OnPostAddedListener() {
                 @Override
                 public void onSuccess(PostModel post) {
-                    Toast.makeText(getActivity(), "Post added successfully", Toast.LENGTH_SHORT).show();
-                    // Navegar de regreso al HomeFragment o a otro fragmento después de añadir el post
+                    Toast.makeText(getActivity(), "Post creado con exito", Toast.LENGTH_SHORT).show();
                     getActivity().getSupportFragmentManager().beginTransaction()
                             .replace(R.id.fragmentContainer, new HomeFragment())
                             .commit();
@@ -137,11 +139,11 @@ public class AddPostFragment extends Fragment {
 
                 @Override
                 public void onFailure(String errorMessage) {
-                    Toast.makeText(getActivity(), "Error adding post: " + errorMessage, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getActivity(), "error creando post: " + errorMessage, Toast.LENGTH_SHORT).show();
                 }
             });
         }, e -> {
-            Toast.makeText(getActivity(), "Error uploading image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getActivity(), "Error subiendo una imagen: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -153,13 +155,34 @@ public class AddPostFragment extends Fragment {
         updatedData.put("city", city);
         updatedData.put("timestamp", timestamp);
 
-        uploadImageToFirebase(selectedBitmap, imageUrl -> {
-            updatedData.put("imageUrl", imageUrl);
+        if (selectedBitmap != null) {
+            uploadImageToFirebase(selectedBitmap, imageUrl -> {
+                updatedData.put("imageUrl", imageUrl);
+
+                postManager.updatePost(postId, updatedData, new PostManager.OnPostUpdatedListener() {
+                    @Override
+                    public void onSuccess() {
+                        Toast.makeText(getActivity(), "Post actualizado", Toast.LENGTH_SHORT).show();
+                        getActivity().getSupportFragmentManager().beginTransaction()
+                                .replace(R.id.fragmentContainer, new HomeFragment())
+                                .commit();
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        Toast.makeText(getActivity(), "Error actualizando el post: " + error, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }, e -> {
+                Toast.makeText(getActivity(), "Error actualizando la imagen: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+        } else {
+            updatedData.put("imageUrl", currentImageUrl);
 
             postManager.updatePost(postId, updatedData, new PostManager.OnPostUpdatedListener() {
                 @Override
                 public void onSuccess() {
-                    Toast.makeText(getActivity(), "Post updated successfully", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getActivity(), "Post actualizado", Toast.LENGTH_SHORT).show();
                     getActivity().getSupportFragmentManager().beginTransaction()
                             .replace(R.id.fragmentContainer, new HomeFragment())
                             .commit();
@@ -167,12 +190,10 @@ public class AddPostFragment extends Fragment {
 
                 @Override
                 public void onFailure(String error) {
-                    Toast.makeText(getActivity(), "Error updating post: " + error, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getActivity(), "Error actualizando el post: " + error, Toast.LENGTH_SHORT).show();
                 }
             });
-        }, e -> {
-            Toast.makeText(getActivity(), "Error uploading image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        });
+        }
     }
 
     private void loadPostData(String postId) {
@@ -180,16 +201,17 @@ public class AddPostFragment extends Fragment {
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!queryDocumentSnapshots.isEmpty()) {
                         DocumentSnapshot documentSnapshot = queryDocumentSnapshots.getDocuments().get(0);
+                        btnAddPost.setText("Guardar cambios");
                         etTitle.setText(documentSnapshot.getString("title"));
                         etDescription.setText(documentSnapshot.getString("description"));
                         etPhone.setText(documentSnapshot.getString("phone"));
                         etCity.setText(documentSnapshot.getString("city"));
-                        // Load image using Glide or any other image loading library
                         String imageUrl = documentSnapshot.getString("imageUrl");
+                        currentImageUrl = documentSnapshot.getString("imageUrl");
                         Glide.with(this).load(imageUrl).into(ivPhoto);
                     }
                 })
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error loading post data", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error cargando los datos del post", Toast.LENGTH_SHORT).show());
     }
 
     private void uploadImageToFirebase(Bitmap bitmap, OnSuccessListener<String> onSuccessListener, OnSuccessListener<Exception> onFailureListener) {

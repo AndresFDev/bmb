@@ -269,9 +269,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         deletePost.setIconTint(ColorStateList.valueOf(context.getResources().getColor(com.google.android.material.R.color.design_default_color_error)));
         deletePost.setTextColor(context.getResources().getColor(com.google.android.material.R.color.design_default_color_error));
 
-        bottomSheetContent.addView(editPost);
-        bottomSheetContent.addView(deletePost);
-
         bottomSheetDialog.setContentView(sheetView);
         bottomSheetDialog.show();
     }

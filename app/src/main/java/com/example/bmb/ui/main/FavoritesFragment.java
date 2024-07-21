@@ -3,6 +3,7 @@ package com.example.bmb.ui.main;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -29,6 +30,7 @@ import java.util.List;
 
 public class FavoritesFragment extends Fragment {
     private RecyclerView rvFavorites;
+    private ConstraintLayout clEmpty;
     private PostAdapter postAdapter;
     private List<PostModel> favoritePosts;
     private FirebaseFirestore db;
@@ -37,6 +39,7 @@ public class FavoritesFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_favorites, container, false);
 
+        clEmpty = view.findViewById(R.id.clEmpty);
         rvFavorites = view.findViewById(R.id.rvFavorites);
         rvFavorites.setLayoutManager(new LinearLayoutManager(getContext()));
         favoritePosts = new ArrayList<>();
@@ -96,8 +99,19 @@ public class FavoritesFragment extends Fragment {
                             }
                         }
                         postAdapter.notifyDataSetChanged();
+                        updateUI();
                     }
                 })
                 .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al cargar los detalles de los posts", Toast.LENGTH_SHORT).show());
+    }
+
+    private void updateUI() {
+        if (favoritePosts.isEmpty()) {
+            clEmpty.setVisibility(View.VISIBLE);
+            rvFavorites.setVisibility(View.GONE);
+        } else {
+            clEmpty.setVisibility(View.GONE);
+            rvFavorites.setVisibility(View.VISIBLE);
+        }
     }
 }

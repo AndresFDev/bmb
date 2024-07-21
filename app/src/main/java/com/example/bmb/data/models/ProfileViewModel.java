@@ -1,14 +1,11 @@
 package com.example.bmb.data.models;
 
-import android.content.Context;
 import android.util.Log;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.example.bmb.auth.AuthManager;
-import com.example.bmb.data.ImageManager;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -16,21 +13,25 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ProfileViewModel extends ViewModel {
     private final FirebaseFirestore db;
     private final FirebaseAuth auth;
     private final MutableLiveData<FirebaseUser> currentUserLiveData;
     private final MutableLiveData<List<PostModel>> postListLiveData;
-
+    private final MutableLiveData<Map<String, Object>> userDataLiveData;
 
     public ProfileViewModel() {
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
         currentUserLiveData = new MutableLiveData<>(auth.getCurrentUser());
         postListLiveData = new MutableLiveData<>(new ArrayList<>());
+        userDataLiveData = new MutableLiveData<>(new HashMap<>());
         fetchUserPosts();
+        fetchUserData();
     }
 
     public LiveData<FirebaseUser> getCurrentUser() {
@@ -39,6 +40,10 @@ public class ProfileViewModel extends ViewModel {
 
     public LiveData<List<PostModel>> getPostList() {
         return postListLiveData;
+    }
+
+    public LiveData<Map<String, Object>> getUserData() {
+        return userDataLiveData;
     }
 
     private void fetchUserPosts() {
@@ -60,5 +65,21 @@ public class ProfileViewModel extends ViewModel {
                     postListLiveData.setValue(postList);
                 })
                 .addOnFailureListener(e -> Log.e("ProfileViewModel", "Error al obtener los posts: " + e.getMessage()));
+    }
+
+    private void fetchUserData() {
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser == null) return;
+
+        db.collection("users").document(currentUser.getUid())
+                .addSnapshotListener((documentSnapshot, e) -> {
+                    if (e != null) {
+                        Log.e("ProfileViewModel", "Error al obtener los datos del usuario: " + e.getMessage());
+                        return;
+                    }
+                    if (documentSnapshot != null && documentSnapshot.exists()) {
+                        userDataLiveData.setValue(documentSnapshot.getData());
+                    }
+                });
     }
 }

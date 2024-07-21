@@ -3,16 +3,14 @@ package com.example.bmb.auth;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.net.Uri;
 import android.util.Log;
 import android.widget.Toast;
-
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.bmb.R;
 import com.example.bmb.data.ImageManager;
 import com.example.bmb.ui.LoginActivity;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -30,9 +28,7 @@ public class AuthManager {
 
     private Context context;
     private FirebaseAuth mAuth;
-    private GoogleSignInClient mGoogleSignInClient;
-
-    private static final int RC_SIGN_IN = 9001; // Código de solicitud para el inicio de sesión con Google
+    private GoogleSignInClient googleSignInClient;
 
     public AuthManager(Context context) {
         this.context = context;
@@ -40,127 +36,120 @@ public class AuthManager {
         configureGoogleSignIn();
     }
 
-    private void configureGoogleSignIn() {
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(context.getString(R.string.default_web_client_id))
-                .requestEmail()
-                .build();
-        mGoogleSignInClient = GoogleSignIn.getClient(context, gso);
+    public GoogleSignInClient configureGoogleSignIn() {
+        if (googleSignInClient == null) {
+            GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken(context.getString(R.string.default_web_client_id))
+                    .requestEmail()
+                    .build();
+            googleSignInClient = GoogleSignIn.getClient(context, gso);
+        }
+        return googleSignInClient;
     }
 
-    public void signInWithEmail(String email, String password, FirebaseAuth.AuthStateListener authStateListener) {
+    public interface OnSignInListener {
+        void onSignInSuccess(FirebaseUser user);
+        void onSignInFailure(String error);
+    }
+
+    public interface OnSignUpListener {
+        void onSignUpSuccess(FirebaseUser user);
+        void onSignUpFailure(String error);
+    }
+
+    public interface DeleteUserCallback {
+        void onSuccess();
+        void onFailure(String error);
+    }
+
+    public interface UpdateUserCallback {
+        void onSuccess();
+        void onFailure(Exception e);
+    }
+
+    public interface OnUserDataFetchListener {
+        void onSuccess(Map<String, Object> userData);
+        void onFailure(String errorMessage);
+    }
+
+    public void signInWithEmail(String email, String password, OnSignInListener listener) {
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        authStateListener.onAuthStateChanged(mAuth);
+                        FirebaseUser user = mAuth.getCurrentUser();
+                        if (user != null) {
+                            listener.onSignInSuccess(user);
+                        } else {
+                            listener.onSignInFailure("No se pudo obtener el usuario");
+                        }
                     } else {
-                        Toast.makeText(context, "Error al iniciar sesión: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                        listener.onSignInFailure("Error al iniciar sesión: " + task.getException().getMessage());
                     }
                 });
     }
 
-    public void signUpWithEmail(Bitmap userPhoto, String userName, String email, String password, FirebaseAuth.AuthStateListener authStateListener) {
+    public void signUpWithEmail(Bitmap userPhoto, String userName, String email, String password, OnSignUpListener listener) {
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         FirebaseUser user = mAuth.getCurrentUser();
                         if (user != null) {
                             if (userPhoto != null) {
-                                // Sube la imagen primero y luego guarda los datos del usuario
                                 ImageManager imgManager = new ImageManager(context);
                                 imgManager.uploadImageToFirebase(userPhoto, imageUrl -> {
                                     saveUserData(user.getUid(), email, userName, imageUrl, password);
-                                    authStateListener.onAuthStateChanged(mAuth); // Notifica éxito en el registro
-                                    Toast.makeText(context, "Registro exitoso", Toast.LENGTH_SHORT).show();
+                                    listener.onSignUpSuccess(user);
                                 }, e -> {
-                                    Toast.makeText(context, "Error al subir la imagen: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                    listener.onSignUpFailure("Error al subir la imagen: " + e.getMessage());
                                 });
                             } else {
-                                // No se proporcionó imagen, guarda los datos del usuario sin imagen
                                 saveUserData(user.getUid(), email, userName, null, password);
-                                authStateListener.onAuthStateChanged(mAuth); // Notifica el cambio de estado de autenticación
-                                Toast.makeText(context, "Registro exitoso", Toast.LENGTH_SHORT).show();
+                                listener.onSignUpSuccess(user);
                             }
                         } else {
-                            Toast.makeText(context, "Error al obtener el usuario después del registro", Toast.LENGTH_SHORT).show();
+                            listener.onSignUpFailure("Error al obtener el usuario después del registro");
                         }
                     } else {
-                        Toast.makeText(context, "Error al registrar: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                        listener.onSignUpFailure("Error al registrar: " + task.getException().getMessage());
                     }
                 });
     }
 
-    public void signInWithGoogle() {
-        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-        ((AppCompatActivity) context).startActivityForResult(signInIntent, RC_SIGN_IN);
-    }
-
-    public void firebaseAuthWithGoogle(String idToken, FirebaseAuth.AuthStateListener authStateListener) {
+    public void signInWithGoogle(GoogleSignInAccount account, OnSignInListener listener) {
+        String idToken = account.getIdToken();
         AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
         mAuth.signInWithCredential(credential)
                 .addOnCompleteListener(task -> {
-
                     if (task.isSuccessful()) {
                         FirebaseUser user = mAuth.getCurrentUser();
-                        Uri photoUrl = user.getPhotoUrl();
-                        String photoUrlString = (photoUrl != null) ? photoUrl.toString() : "";
-
                         if (user != null) {
-                            // Registro en Firestore si es la primera vez que inicia sesión con Google
-                            boolean isNewUser = task.getResult().getAdditionalUserInfo().isNewUser();
-                            if (isNewUser) {
-
-                                saveUserData(user.getUid(), user.getEmail(), user.getDisplayName(), photoUrlString, "Google Authenticated");
-                            }
-                            authStateListener.onAuthStateChanged(mAuth);
-                            Toast.makeText(context, "Inicio de sesión con Google exitoso", Toast.LENGTH_SHORT).show();
+                            listener.onSignInSuccess(user);
                         } else {
-                            Toast.makeText(context, "Error al obtener información del usuario", Toast.LENGTH_SHORT).show();
+                            listener.onSignInFailure("No se pudo obtener el usuario");
                         }
                     } else {
-                        Toast.makeText(context, "Error al iniciar sesión con Google: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-
-                    if (task.isSuccessful()) {
-                        authStateListener.onAuthStateChanged(mAuth);
-                    } else {
-                        Toast.makeText(context, "Error al iniciar sesión con Google: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                        listener.onSignInFailure("Error al iniciar sesión con Google: " + task.getException().getMessage());
                     }
                 });
     }
 
-    public interface DeleteUserCallback {
-        void onSuccess();
-
-        void onFailure(String error);
-    }
-
     public void deleteUser(DeleteUserCallback callback) {
-        FirebaseUser user = mAuth.getCurrentUser();
-
-        if (user != null) {
-            String userId = user.getUid(); // Obtén el ID del usuario actual
-
-            FirebaseFirestore db = FirebaseFirestore.getInstance();
-
-            // Eliminar el documento del usuario en Firestore
-            db.collection("users").document(userId)
-                    .delete()
-                    .addOnSuccessListener(aVoid -> {
-                        Log.d("AuthManager", "Documento de usuario eliminado correctamente");
-
-                        // Después de eliminar el documento, eliminar el usuario de Firebase Authentication
-                        revokeGoogleAccess(user);
-                        callback.onSuccess();
-                    })
-                    .addOnFailureListener(e -> {
-                        Log.e("AuthManager", "Error al eliminar documento de usuario", e);
-                        callback.onFailure(e.getMessage());
-                    });
-        } else {
-            Log.e("AuthManager", "No se pudo obtener el usuario actual para eliminar");
-            callback.onFailure("No se pudo obtener el usuario actual para eliminar");
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            callback.onFailure("Usuario no esta logeado");
+            return;
         }
+
+        if (isGoogleSignInUser(currentUser)) {
+            revokeGoogleAccess(currentUser);
+        }
+
+        FirebaseFirestore.getInstance().collection("users").document(currentUser.getUid())
+                .delete()
+                .addOnSuccessListener(aVoid -> currentUser.delete()
+                        .addOnSuccessListener(aVoid1 -> callback.onSuccess())
+                        .addOnFailureListener(e -> callback.onFailure(e.getMessage())))
+                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
     private void revokeGoogleAccess(FirebaseUser user) {
@@ -170,7 +159,6 @@ public class AuthManager {
         googleSignInClient.revokeAccess()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        // Después de revocar el acceso, eliminar el usuario de Firebase Authentication
                         user.delete()
                                 .addOnSuccessListener(aVoid -> {
                                     Log.d("AuthManager", "Usuario eliminado correctamente de Firebase Authentication");
@@ -219,83 +207,69 @@ public class AuthManager {
                 .addOnFailureListener(e -> listener.onFailure(e.getMessage()));
     }
 
-    public interface OnUserDataFetchListener {
-        void onSuccess(Map<String, Object> userData);
-
-        void onFailure(String errorMessage);
-    }
-
-
-    public void updateUserData(String userName, Bitmap newPhoto, String newPassword, OnCompleteListener<Void> onCompleteListener) {
+    public void updateUserData(String userName, Bitmap newPhoto, String newPassword, UpdateUserCallback callback) {
         FirebaseUser user = mAuth.getCurrentUser();
 
         if (user != null) {
             if (isGoogleSignInUser(user)) {
-                // Usuario autenticado con Google, no permite la actualización de email y contraseña
                 if (newPhoto != null) {
-                    // Actualizar solo nombre y foto
-                    updateUserNameAndPhoto(user.getUid(), userName, newPhoto, onCompleteListener);
+                    updateUserNameAndPhoto(user.getUid(), userName, newPhoto, callback);
                 } else {
-                    // Solo actualiza el nombre si no hay nueva foto
-                    updateUserNameAndPhoto(user.getUid(), userName, null, onCompleteListener);
+                    updateUserNameAndPhoto(user.getUid(), userName, null, callback);
                 }
             } else {
-                // Usuario autenticado con email/password
                 if (newPassword != null && !newPassword.isEmpty()) {
-                    // Actualiza la contraseña
                     updatePassword(newPassword, task -> {
                         if (task.isSuccessful()) {
                             Toast.makeText(context, "Contraseña actualizada correctamente", Toast.LENGTH_SHORT).show();
+                            updateUserNameAndPhoto(user.getUid(), userName, newPhoto, callback);
                         } else {
                             Toast.makeText(context, "Error al actualizar la contraseña: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                            callback.onFailure(task.getException());
                         }
-                        // Luego de actualizar la contraseña, actualizar nombre y foto
-                        updateUserNameAndPhoto(user.getUid(), userName, newPhoto, onCompleteListener);
                     });
                 } else {
-                    // Solo actualiza el nombre y la foto
-                    updateUserNameAndPhoto(user.getUid(), userName, newPhoto, onCompleteListener);
+                    updateUserNameAndPhoto(user.getUid(), userName, newPhoto, callback);
                 }
             }
         } else {
             Toast.makeText(context, "Usuario no encontrado", Toast.LENGTH_SHORT).show();
+            callback.onFailure(new Exception("Usuario no encontrado"));
         }
     }
 
-    private void updateUserNameAndPhoto(String userId, String userName, Bitmap newPhoto, OnCompleteListener<Void> onCompleteListener) {
+    private void updateUserNameAndPhoto(String userId, String userName, Bitmap newPhoto, UpdateUserCallback callback) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         Map<String, Object> updates = new HashMap<>();
         updates.put("name", userName);
 
         if (newPhoto != null) {
-            // Si se proporciona una nueva imagen, subir y actualizar la URL de la imagen
             ImageManager imgManager = new ImageManager(context);
             imgManager.uploadImageToFirebase(newPhoto, imageUrl -> {
-                updates.put("userPhoto", imageUrl); // Actualiza la nueva URL de la imagen
+                updates.put("userPhoto", imageUrl);
                 db.collection("users").document(userId)
                         .update(updates)
-                        .addOnCompleteListener(onCompleteListener);
+                        .addOnSuccessListener(aVoid -> callback.onSuccess())
+                        .addOnFailureListener(e -> callback.onFailure(e));
             }, e -> {
                 Toast.makeText(context, "Error al subir la imagen: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                callback.onFailure(e);
             });
         } else {
-            // Si no se proporciona una nueva imagen, mantener la URL de la imagen existente
             db.collection("users").document(userId)
                     .update(updates)
-                    .addOnCompleteListener(onCompleteListener);
+                    .addOnSuccessListener(aVoid -> callback.onSuccess())
+                    .addOnFailureListener(e -> callback.onFailure(e));
         }
     }
-
 
     public void updatePassword(String newPassword, OnCompleteListener<Void> onCompleteListener) {
         FirebaseUser user = mAuth.getCurrentUser();
 
         if (user != null) {
             if (isGoogleSignInUser(user)) {
-                // No permite la actualización de contraseña para usuarios autenticados con Google
                 Toast.makeText(context, "No se puede cambiar la contraseña de usuarios autenticados con Google", Toast.LENGTH_SHORT).show();
             } else {
-                // Permite la actualización de contraseña para usuarios autenticados con email/password
                 user.updatePassword(newPassword)
                         .addOnCompleteListener(onCompleteListener);
             }
@@ -315,9 +289,5 @@ public class AuthManager {
         Intent intent = new Intent(context, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         context.startActivity(intent);
-    }
-
-    public FirebaseUser getCurrentUser() {
-        return mAuth.getCurrentUser();
     }
 }

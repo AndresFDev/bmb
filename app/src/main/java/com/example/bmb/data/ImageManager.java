@@ -104,7 +104,6 @@ public class ImageManager {
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
             Uri filePath = data.getData();
             try {
-                // Convertir URI a Bitmap
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(), filePath);
                 onSuccessListener.onSuccess(bitmap);
             } catch (IOException e) {
@@ -117,17 +116,14 @@ public class ImageManager {
         long timestamp = System.currentTimeMillis();
         String fileName = "img_" + timestamp + ".webp";
 
-        // Convertir Bitmap a WebP y comprimir
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.WEBP, 50, baos); // Aquí puedes ajustar la calidad de compresión
         byte[] data = baos.toByteArray();
 
-        // Referencia del archivo en Firebase Storage
         StorageReference imageRef = storageRef.child("images/" + fileName);
         UploadTask uploadTask = imageRef.putBytes(data);
 
         uploadTask.addOnSuccessListener(taskSnapshot -> {
-            // Obtener la URL de descarga
             imageRef.getDownloadUrl().addOnSuccessListener(uri -> {
                 String imageUrl = uri.toString();
                 onSuccessListener.onSuccess(imageUrl);

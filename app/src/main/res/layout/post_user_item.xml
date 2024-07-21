@@ -17,22 +17,32 @@
         android:scaleType="centerCrop"
         android:src="@drawable/ic_image_placeholder" />
 
-    <TextView
-        android:id="@+id/tvTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center|bottom"
-        android:layout_marginBottom="@dimen/small"
-        android:fontFamily="@font/product_sans_bold"
-        android:textSize="@dimen/textMedium" />
-
     <ImageButton
         android:id="@+id/btnOptions"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:padding="@dimen/small"
-        android:src="@drawable/ic_more"
+        android:layout_gravity="end"
         android:background="@color/none"
-        android:layout_gravity="end"/>
+        android:padding="@dimen/small"
+        android:src="@drawable/ic_more" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center|bottom"
+        app:cardBackgroundColor="@color/translucid"
+        app:strokeWidth="@dimen/none">
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/medium"
+            android:gravity="center"
+            android:layout_gravity="center_vertical"
+            android:fontFamily="@font/product_sans_bold"
+            android:textSize="@dimen/textMedium" />
+
+    </com.google.android.material.card.MaterialCardView>
 
 </com.google.android.material.carousel.MaskableFrameLayout>

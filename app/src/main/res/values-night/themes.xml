@@ -4,6 +4,7 @@
         <!-- Customize your dark theme here. -->
         <item name="colorPrimary">@color/colorPrimaryDark</item>
         <item name="colorOutline">@color/colorPrimaryDark</item>
+        <item name="colorOnPrimary">@color/white</item>
     </style>
 
     <style name="Widget.App.MaterialDivider" parent="Widget.Material3.MaterialDivider">
@@ -14,6 +15,14 @@
         <item name="colorContainer">@color/colorPrimaryDark</item>
         <item name="colorOnContainer">@color/white</item>
     </style>
+
+    <style name="ThemeOverlay.App.BottomNavigationView" parent="">
+        <item name="colorSurface">@color/colorPrimaryDark</item>
+        <item name="colorOnSurfaceVariant">@color/black</item>
+        <item name="colorOnSecondaryContainer">@color/white</item>
+        <item name="colorOnSurface">@color/white</item>
+    </style>
+
 
     <style name="IconLogo">
         <item name="tint">@color/colorPrimaryDark</item>
