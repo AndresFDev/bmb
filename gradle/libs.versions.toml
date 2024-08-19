@@ -1,7 +1,10 @@
 [versions]
-agp = "8.5.0"
+agp = "8.5.2"
 compiler = "4.16.0"
+firebaseAdmin = "23.0.0"
 firebaseBom = "33.1.2"
+firebaseFunctions = "22.0.0"
+firebaseMessaging = "24.2.0"
 firebaseStorage = "21.0.0"
 glide = "4.16.0"
 junit = "4.13.2"
@@ -9,20 +12,24 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 appcompat = "1.7.0"
 material = "1.12.0"
-activity = "1.9.0"
+activity = "1.9.1"
 constraintlayout = "2.1.4"
-annotation = "1.8.0"
-lifecycleLivedataKtx = "2.8.3"
-lifecycleViewmodelKtx = "2.8.3"
+annotation = "1.8.2"
+lifecycleLivedataKtx = "2.8.4"
+lifecycleViewmodelKtx = "2.8.4"
 playServicesAuth = "21.2.0"
 playServicesBase = "18.5.0"
+shimmer = "0.5.0"
 uiTextGoogleFonts = "1.6.8"
 
 [libraries]
 compiler = { module = "com.github.bumptech.glide:compiler", version.ref = "compiler" }
-firebase-auth = { module = "com.google.firebase:firebase-auth" }
+firebase-admin = { module = "com.google.firebase:firebase-admin", version = "9.3.0" }
+firebase-auth = { module = "com.google.firebase:firebase-auth", version = "23.0.0" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
-firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx" }
+firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx", version = "25.0.0" }
+firebase-functions = { module = "com.google.firebase:firebase-functions", version = "21.0.0" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging", version = "24.0.0" }
 firebase-storage = { module = "com.google.firebase:firebase-storage", version.ref = "firebaseStorage" }
 glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -37,6 +44,7 @@ lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-lived
 lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 play-services-base = { module = "com.google.android.gms:play-services-base", version.ref = "playServicesBase" }
+shimmer = { module = "com.facebook.shimmer:shimmer", version = "0.5.0" }
 ui-text-google-fonts = { module = "androidx.compose.ui:ui-text-google-fonts", version.ref = "uiTextGoogleFonts" }
 
 [plugins]

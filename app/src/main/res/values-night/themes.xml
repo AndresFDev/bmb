@@ -5,6 +5,7 @@
         <item name="colorPrimary">@color/colorPrimaryDark</item>
         <item name="colorOutline">@color/colorPrimaryDark</item>
         <item name="colorOnPrimary">@color/white</item>
+        <item name="colorTertiary">#80DBA76D</item>
     </style>
 
     <style name="Widget.App.MaterialDivider" parent="Widget.Material3.MaterialDivider">

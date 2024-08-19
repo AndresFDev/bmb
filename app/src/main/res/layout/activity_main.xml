@@ -24,21 +24,21 @@
                 android:id="@+id/llUser"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <ImageView
                     android:id="@+id/ivUser"
                     android:layout_width="@dimen/xLarge"
                     android:layout_height="@dimen/xLarge"
-                    android:layout_marginEnd="@dimen/medium"/>
+                    android:layout_marginEnd="@dimen/small" />
 
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/tvUserName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="@dimen/textMedium"
-                    app:fontFamily="@font/product_sans_black"/>
+                    app:fontFamily="@font/product_sans_black" />
 
             </LinearLayout>
 
@@ -51,14 +51,15 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        app:layout_constraintTop_toBottomOf="@id/appbarLayout"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/appbarLayout" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNavigation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="@dimen/small"
+        android:layout_margin="@dimen/medium"
+        android:animateLayoutChanges="true"
         android:background="@drawable/frm_radius"
         app:layout_constraintBottom_toBottomOf="parent"
         app:menu="@menu/bottom_navigation_menu" />

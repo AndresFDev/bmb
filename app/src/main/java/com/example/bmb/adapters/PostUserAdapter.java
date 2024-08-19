@@ -14,7 +14,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.RecyclerView;
@@ -73,6 +72,7 @@ public class PostUserAdapter extends RecyclerView.Adapter<PostUserAdapter.PostVi
     @Override
     public void onBindViewHolder(PostViewHolder holder, int position) {
         PostModel post = postList.get(position);
+
         String imageUrl = post.getImageUrl();
 
         holder.tvTitle.setText(post.getTitle());
@@ -89,6 +89,13 @@ public class PostUserAdapter extends RecyclerView.Adapter<PostUserAdapter.PostVi
         });
 
         String postId = post.getId();
+        String userId = post.getIdUser();
+
+        if(FirebaseAuth.getInstance().getCurrentUser().getUid().equals(userId)) {
+            holder.btnOptions.setVisibility(View.VISIBLE);
+        } else {
+            holder.btnOptions.setVisibility(View.GONE);
+        }
         holder.btnOptions.setOnClickListener(v -> showOptionsSheet(holder.itemView.getContext(), postId, position));
 
     }

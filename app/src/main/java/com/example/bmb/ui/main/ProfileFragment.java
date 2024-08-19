@@ -3,7 +3,7 @@ package com.example.bmb.ui.main;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
-import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -17,9 +17,6 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.provider.MediaStore;
-import android.text.Spannable;
-import android.text.SpannableString;
-import android.text.Spanned;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -27,10 +24,13 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.transition.Transition;
 import com.example.bmb.R;
+import com.example.bmb.utils.ShimmerViewHelper;
 import com.example.bmb.auth.AuthManager;
 import com.example.bmb.utils.ProgressUtils;
 import com.example.bmb.adapters.PostUserAdapter;
@@ -39,9 +39,13 @@ import com.example.bmb.data.models.ProfileViewModel;
 import com.example.bmb.ui.LoginActivity;
 import com.example.bmb.utils.StrokeTextView;
 import com.example.bmb.utils.TextInputValidator;
+import com.facebook.shimmer.ShimmerFrameLayout;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.carousel.CarouselLayoutManager;
+import com.google.android.material.chip.Chip;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -52,7 +56,11 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.auth.UserInfo;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -62,19 +70,24 @@ public class ProfileFragment extends Fragment {
 
     private AuthManager authManager;
     private FirebaseFirestore db;
-    private ConstraintLayout clEmpty;
+    private String userId;
+    private ScrollView svEditUser;
     private ImageView ivPhoto, ivNewPhoto;
     private ImageButton btnUserSettings, btnClose;
     private StrokeTextView tvUserName;
-    private ConstraintLayout clTopDataUser, clEditUser;
+    private ConstraintLayout clTopDataUser, clEmpty;
     private TextInputLayout tilEmail, tilPassword, tilNewPassword, tilConfirm;
     private TextInputEditText etUserName, etEmail, etPassword, etNewPassword, etConfirm;
     private MaterialButton btnPhoto, btnShow, btnSave;
+    private MaterialTextView tvFollowersCount, tvFollowsCount, tvFavoriteCount;
     private RecyclerView rvPostUser;
     private ProfileViewModel profileViewModel;
     private ImageManager imageManager;
     private Bitmap selectedBitmap;
+    private Chip chipFollower;
     private ActivityResultLauncher<String> imagePickerLauncher;
+    private ShimmerViewHelper shimmerViewHelper;
+    private ShimmerFrameLayout shimmerUserImage;
     private boolean arePasswordFieldsVisible = false;
 
     @Override
@@ -96,14 +109,26 @@ public class ProfileFragment extends Fragment {
                         }
                     }
                 });
+
+        if (getArguments() != null) {
+            userId = getArguments().getString("userId");
+        } else {
+            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+            if (currentUser != null) {
+                userId = currentUser.getUid();
+            } else {
+                Log.e("ProfileFragment", "No hay un usuario autenticado.");
+            }
+        }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_profile, container, false);
         initViews(view);
+        updateCounts();
         setupRecyclerView();
-        setupButtonListeners();
+        setupButtonListeners(view);
         ProgressUtils.initProgress(getContext(), (ViewGroup) view);
         togglePasswordFieldsVisibility();
         return view;
@@ -113,6 +138,10 @@ public class ProfileFragment extends Fragment {
         clEmpty = view.findViewById(R.id.clEmpty);
         ivPhoto = view.findViewById(R.id.ivPhoto);
         ivNewPhoto = view.findViewById(R.id.ivNewPhoto);
+        tvFollowersCount = view.findViewById(R.id.tvFollowersCount);
+        tvFollowsCount = view.findViewById(R.id.tvFollowsCount);
+        tvFavoriteCount = view.findViewById(R.id.tvFavoriteCount);
+        shimmerUserImage = view.findViewById(R.id.shimmerUserImage);
         tvUserName = view.findViewById(R.id.tvUserName);
         etUserName = view.findViewById(R.id.etUserName);
         etEmail = view.findViewById(R.id.etEmail);
@@ -120,7 +149,7 @@ public class ProfileFragment extends Fragment {
         etNewPassword = view.findViewById(R.id.etNewPassword);
         etConfirm = view.findViewById(R.id.etConfirm);
         clTopDataUser = view.findViewById(R.id.clTopDataUser);
-        clEditUser = view.findViewById(R.id.clEditUser);
+        svEditUser = view.findViewById(R.id.svEditUser);
         tilEmail = view.findViewById(R.id.tilEmail);
         tilPassword = view.findViewById(R.id.tilPassword);
         tilNewPassword = view.findViewById(R.id.tilNewPassword);
@@ -130,15 +159,66 @@ public class ProfileFragment extends Fragment {
         btnPhoto = view.findViewById(R.id.btnPhoto);
         btnShow = view.findViewById(R.id.btnShow);
         btnSave = view.findViewById(R.id.btnSave);
+        chipFollower = view.findViewById(R.id.chipFollower);
         rvPostUser = view.findViewById(R.id.rvPostUser);
+
+        shimmerViewHelper = new ShimmerViewHelper(shimmerUserImage);
     }
+
+    public void updateCounts() {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        CollectionReference followersRef = db.collection("users").document(userId).collection("followers");
+        CollectionReference followingRef = db.collection("users").document(userId).collection("following");
+        CollectionReference favoritesRef = db.collection("users").document(userId).collection("favorites");
+
+        followersRef.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(Task<QuerySnapshot> task) {
+                if (task.isSuccessful()) {
+                    int followersCount = task.getResult().size();
+                    tvFollowersCount.setText(String.valueOf(followersCount));
+                } else {
+                    // Manejar error
+                    tvFollowersCount.setText("0");
+                }
+            }
+        });
+
+        followingRef.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(Task<QuerySnapshot> task) {
+                if (task.isSuccessful()) {
+                    int followingCount = task.getResult().size();
+                    tvFollowsCount.setText(String.valueOf(followingCount));
+                } else {
+                    // Manejar error
+                    tvFollowsCount.setText("0");
+                }
+            }
+        });
+
+        favoritesRef.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(Task<QuerySnapshot> task) {
+                if (task.isSuccessful()) {
+                    int favoritesCount = task.getResult().size();
+                    tvFavoriteCount.setText(String.valueOf(favoritesCount));
+                } else {
+                    // Manejar error
+                    tvFavoriteCount.setText("0");
+                }
+            }
+        });
+    }
+
 
     private void setupRecyclerView() {
         rvPostUser.setLayoutManager(new CarouselLayoutManager());
         PostUserAdapter postsUserAdapter = new PostUserAdapter(getContext(), new ArrayList<>());
         rvPostUser.setAdapter(postsUserAdapter);
 
-        profileViewModel.getPostList().observe(getViewLifecycleOwner(), posts -> {
+        profileViewModel.getPostList(userId).observe(getViewLifecycleOwner(), posts -> {
             postsUserAdapter.updatePosts(posts);
 
             if (posts.isEmpty()) {
@@ -151,7 +231,7 @@ public class ProfileFragment extends Fragment {
         });
     }
 
-    private void setupButtonListeners() {
+    private void setupButtonListeners(View view) {
         btnUserSettings.setOnClickListener(v -> {
             if (!isCurrentUserGoogleUser()) {
                 togglePasswordFieldsVisibility();
@@ -171,25 +251,71 @@ public class ProfileFragment extends Fragment {
         btnShow.setOnClickListener(v -> togglePasswordFieldsVisibility());
         btnClose.setOnClickListener(v -> toggleEditUserVisibility(false));
         btnSave.setOnClickListener(v -> updateUser());
+        chipFollower.setOnClickListener(v -> handleFollowerButtonClick(view));
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        if (userId != null) {
+            loadUserProfile(userId);
+        } else {
+            Log.e("ProfileFragment", "No se pudo determinar el ID de usuario.");
+            ProgressUtils.hideProgress();
+        }
+
+        configureVisibilityBasedOnUser();
+    }
+
+    private void loadUserProfile(String userId) {
+        profileViewModel.fetchUserData(userId);
+        profileViewModel.fetchUserPosts(userId);
         profileViewModel.getCurrentUser().observe(getViewLifecycleOwner(), currentUser -> {
             if (currentUser != null) {
-                profileViewModel.getUserData().observe(getViewLifecycleOwner(), userData -> {
-                    updateUI(currentUser, userData);
+                profileViewModel.getUserData(userId).observe(getViewLifecycleOwner(), userData -> {
+                    if (userData != null) {
+                        updateUI(currentUser, userData);
+                        checkIfUserIsFollowing(userId);
+                    } else {
+                        Log.d("ProfileFragment", "No se encontraron datos para el usuario con ID: " + userId);
+                        ProgressUtils.hideProgress();
+                    }
                 });
             } else {
+                Log.d("ProfileFragment", "No se encontró un usuario autenticado.");
                 ProgressUtils.hideProgress();
             }
         });
+
+        profileViewModel.getPostList(userId).observe(getViewLifecycleOwner(), posts -> {
+            if (posts.isEmpty()) {
+                clEmpty.setVisibility(View.VISIBLE);
+                rvPostUser.setVisibility(View.GONE);
+            } else {
+                clEmpty.setVisibility(View.GONE);
+                rvPostUser.setVisibility(View.VISIBLE);
+            }
+        });
+
+        configureVisibilityBasedOnUser();
+    }
+
+    private void configureVisibilityBasedOnUser() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getUid().equals(userId)) {
+            btnUserSettings.setVisibility(View.VISIBLE);
+            chipFollower.setVisibility(View.GONE);
+        } else {
+            btnUserSettings.setVisibility(View.GONE);
+            chipFollower.setVisibility(View.VISIBLE);
+        }
     }
 
     private void updateUI(FirebaseUser currentUser, Map<String, Object> userData) {
         ProgressUtils.showProgress();
+
+        shimmerViewHelper.startShimmer();
 
         if (userData != null) {
             String userPhotoUrl = (String) userData.get("userPhoto");
@@ -206,15 +332,56 @@ public class ProfileFragment extends Fragment {
 
             Glide.with(requireContext())
                     .load(userPhotoUrl)
-                    .placeholder(R.drawable.ic_user_photo)
-                    .error(R.drawable.ic_user_photo)
-                    .into(ivPhoto);
+                    .error(R.drawable.ic_user)
+                    .into(new com.bumptech.glide.request.target.CustomTarget<Drawable>() {
+                        @Override
+                        public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
+                            ivPhoto.setImageDrawable(resource);
+                            shimmerUserImage.stopShimmer();
+                            shimmerUserImage.setVisibility(View.GONE);
+                            ivPhoto.setVisibility(View.VISIBLE);
+                        }
+
+                        @Override
+                        public void onLoadFailed(@Nullable Drawable errorDrawable) {
+                            ivPhoto.setImageDrawable(errorDrawable);
+                            shimmerUserImage.stopShimmer();
+                            shimmerUserImage.setVisibility(View.GONE);
+                            ivPhoto.setVisibility(View.VISIBLE);
+                        }
+
+                        @Override
+                        public void onLoadCleared(@Nullable Drawable placeholder) {
+
+                        }
+                    });
+
 
             Glide.with(requireContext())
                     .load(userPhotoUrl)
-                    .placeholder(R.drawable.ic_user_photo)
-                    .error(R.drawable.ic_user_photo)
-                    .into(ivNewPhoto);
+                    .error(R.drawable.ic_user)
+                    .into(new com.bumptech.glide.request.target.CustomTarget<Drawable>() {
+                        @Override
+                        public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
+                            ivNewPhoto.setImageDrawable(resource);
+                            shimmerUserImage.stopShimmer();
+                            shimmerUserImage.setVisibility(View.GONE);
+                            ivNewPhoto.setVisibility(View.VISIBLE);
+                        }
+
+                        @Override
+                        public void onLoadFailed(@Nullable Drawable errorDrawable) {
+                            ivNewPhoto.setImageDrawable(errorDrawable);
+                            shimmerUserImage.stopShimmer();
+                            shimmerUserImage.setVisibility(View.GONE);
+                            ivNewPhoto.setVisibility(View.VISIBLE);
+                        }
+
+                        @Override
+                        public void onLoadCleared(@Nullable Drawable placeholder) {
+
+                        }
+                    });
 
             ProgressUtils.hideProgress();
             return;
@@ -243,15 +410,55 @@ public class ProfileFragment extends Fragment {
 
                         Glide.with(requireContext())
                                 .load(userPhotoUrl)
-                                .placeholder(R.drawable.ic_user_photo)
-                                .error(R.drawable.ic_user_photo)
-                                .into(ivPhoto);
+                                .error(R.drawable.ic_user)
+                                .into(new com.bumptech.glide.request.target.CustomTarget<Drawable>() {
+                                    @Override
+                                    public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
+                                        ivPhoto.setImageDrawable(resource);
+                                        shimmerUserImage.stopShimmer();
+                                        shimmerUserImage.setVisibility(View.GONE);
+                                        ivPhoto.setVisibility(View.VISIBLE);
+                                    }
+
+                                    @Override
+                                    public void onLoadFailed(@Nullable Drawable errorDrawable) {
+                                        ivPhoto.setImageDrawable(errorDrawable);
+                                        shimmerUserImage.stopShimmer();
+                                        shimmerUserImage.setVisibility(View.GONE);
+                                        ivPhoto.setVisibility(View.VISIBLE);
+                                    }
+
+                                    @Override
+                                    public void onLoadCleared(@Nullable Drawable placeholder) {
+
+                                    }
+                                });
 
                         Glide.with(requireContext())
                                 .load(userPhotoUrl)
-                                .placeholder(R.drawable.ic_user_photo)
-                                .error(R.drawable.ic_user_photo)
-                                .into(ivNewPhoto);
+                                .error(R.drawable.ic_user)
+                                .into(new com.bumptech.glide.request.target.CustomTarget<Drawable>() {
+                                    @Override
+                                    public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
+                                        ivNewPhoto.setImageDrawable(resource);
+                                        shimmerUserImage.stopShimmer();
+                                        shimmerUserImage.setVisibility(View.GONE);
+                                        ivNewPhoto.setVisibility(View.VISIBLE);
+                                    }
+
+                                    @Override
+                                    public void onLoadFailed(@Nullable Drawable errorDrawable) {
+                                        ivNewPhoto.setImageDrawable(errorDrawable);
+                                        shimmerUserImage.stopShimmer();
+                                        shimmerUserImage.setVisibility(View.GONE);
+                                        ivNewPhoto.setVisibility(View.VISIBLE);
+                                    }
+
+                                    @Override
+                                    public void onLoadCleared(@Nullable Drawable placeholder) {
+
+                                    }
+                                });
                     } else {
                         Log.d("ProfileFragment", "No se encontraron datos para el usuario actual");
                     }
@@ -263,6 +470,105 @@ public class ProfileFragment extends Fragment {
                 });
     }
 
+    private void checkIfUserIsFollowing(String targetUserId) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            String currentUserId = currentUser.getUid();
+
+            DocumentReference followersRef = db.collection("users").document(targetUserId)
+                    .collection("followers").document(currentUserId);
+
+            followersRef.get().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot document = task.getResult();
+                    if (document.exists()) {
+                        chipFollower.setChecked(true);
+                        chipFollower.setText("Siguiendo");
+                        chipFollower.setChipBackgroundColor(ColorStateList.valueOf(androidx.appcompat.R.attr.colorPrimary));
+                    } else {
+                        chipFollower.setChipBackgroundColor(ColorStateList.valueOf(getResources().getColor(R.color.none)));
+                        chipFollower.setChecked(false);
+                        chipFollower.setText("Seguir");
+                    }
+                } else {
+                    Log.e("ProfileFragment", "Error al verificar estado de seguimiento", task.getException());
+                }
+            });
+        }
+    }
+
+    private void handleFollowerButtonClick(View v) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            String currentUserId = currentUser.getUid();
+            String targetUserId = userId;
+
+            DocumentReference userRef = db.collection("users").document(targetUserId);
+            userRef.get().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot document = task.getResult();
+                    if (document.exists()) {
+                        String targetUserName = document.getString("name");
+
+                        DocumentReference followersRef = db.collection("users").document(targetUserId)
+                                .collection("followers").document(currentUserId);
+
+                        DocumentReference followingRef = db.collection("users").document(currentUserId)
+                                .collection("following").document(targetUserId);
+
+                        followersRef.get().addOnCompleteListener(followTask -> {
+                            if (followTask.isSuccessful()) {
+                                DocumentSnapshot followDocument = followTask.getResult();
+                                if (followDocument.exists()) {
+                                    // Si ya está siguiendo, entonces eliminar de followers y following
+                                    followersRef.delete()
+                                            .addOnSuccessListener(aVoid -> {
+                                                followingRef.delete() // Eliminar de la colección following
+                                                        .addOnSuccessListener(aVoid2 -> {
+                                                            chipFollower.setChecked(false);
+                                                            chipFollower.setText("Seguir");
+                                                            chipFollower.setChipBackgroundColor(ColorStateList.valueOf(getResources().getColor(R.color.none)));
+                                                            showToast(v, "Dejaste de seguir a " + targetUserName);
+                                                        })
+                                                        .addOnFailureListener(e -> showToast(v, "Error al dejar de seguir en la colección following"));
+                                            })
+                                            .addOnFailureListener(e -> showToast(v, "Error al dejar de seguir en la colección followers"));
+                                } else {
+                                    // Si no está siguiendo, entonces agregar a followers y following
+                                    Map<String, Object> followerData = new HashMap<>();
+                                    followerData.put("userId", currentUserId);
+
+                                    Map<String, Object> followingData = new HashMap<>();
+                                    followingData.put("userId", targetUserId);
+
+                                    followersRef.set(followerData)
+                                            .addOnSuccessListener(aVoid -> {
+                                                followingRef.set(followingData) // Agregar a la colección following
+                                                        .addOnSuccessListener(aVoid2 -> {
+                                                            chipFollower.setChecked(true);
+                                                            chipFollower.setText("Siguiendo");
+                                                            chipFollower.setChipBackgroundColor(ColorStateList.valueOf(getResources().getColor(R.color.selected)));
+                                                            showToast(v, "Siguiendo a " + targetUserName);
+                                                        })
+                                                        .addOnFailureListener(e -> showToast(v, "Error al seguir en la colección following"));
+                                            })
+                                            .addOnFailureListener(e -> showToast(v, "Error al seguir en la colección followers"));
+                                }
+                            } else {
+                                showToast(v, "Error al obtener el estado de los seguidos");
+                            }
+                        });
+                    } else {
+                        showToast(v, "No se encontró el usuario");
+                    }
+                } else {
+                    showToast(v, "Error al obtener los datos del usuario");
+                }
+            });
+        } else {
+            showToast(v, "Usuario no está autenticado");
+        }
+    }
 
     private void togglePasswordFieldsVisibility() {
         arePasswordFieldsVisible = !arePasswordFieldsVisible;
@@ -274,7 +580,7 @@ public class ProfileFragment extends Fragment {
 
     private void toggleEditUserVisibility(boolean show) {
         clTopDataUser.setVisibility(show ? View.GONE : View.VISIBLE);
-        clEditUser.setVisibility(show ? View.VISIBLE : View.GONE);
+        svEditUser.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
     private void showBottomSheet() {
@@ -462,5 +768,9 @@ public class ProfileFragment extends Fragment {
                 Toast.makeText(getContext(), "Error al eliminar la cuenta: " + errorMessage, Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void showToast(View v, String message) {
+        Toast.makeText(v.getContext(), message, Toast.LENGTH_SHORT).show();
     }
 }

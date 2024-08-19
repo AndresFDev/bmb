@@ -54,6 +54,8 @@ dependencies {
     implementation(libs.firebase.firestore.ktx)
     implementation (libs.firebase.storage)
 
+    implementation (libs.shimmer)
+
     implementation (libs.glide)
     annotationProcessor (libs.compiler)
 

@@ -4,8 +4,8 @@
     <dimen name="medium">16dp</dimen>
     <dimen name="large">24dp</dimen>
     <dimen name="xLarge">32dp</dimen>
-    <dimen name="textXSmall">4sp</dimen>
-    <dimen name="textSmall">8sp</dimen>
+    <dimen name="textXSmall">8sp</dimen>
+    <dimen name="textSmall">12sp</dimen>
     <dimen name="textMedium">16sp</dimen>
     <dimen name="textLarge">24sp</dimen>
     <dimen name="textXLarge">32sp</dimen>

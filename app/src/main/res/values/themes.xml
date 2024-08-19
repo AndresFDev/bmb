@@ -3,6 +3,7 @@
     <style name="Base.Theme.BMB" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorTertiary">#80FFAB91</item>
     </style>
 
     <style name="Theme.BMB" parent="Base.Theme.BMB">

@@ -2,18 +2,18 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/vet"
+        android:id="@+id/messages"
         android:enabled="true"
-        android:icon="@drawable/ic_vet"
-        android:title="Veterinarias" />
+        android:icon="@drawable/ic_chat"
+        android:title="Mensajes" />
     <item
         android:id="@+id/home"
         android:enabled="true"
         android:icon="@drawable/ic_home"
-        android:title="Home"/>
+        android:title="Home" />
     <item
-        android:id="@+id/adop"
+        android:id="@+id/vet"
         android:enabled="true"
-        android:icon="@drawable/ic_pets"
-        android:title="Adoptame" />
+        android:icon="@drawable/ic_vet"
+        android:title="Veterinarias" />
 </menu>

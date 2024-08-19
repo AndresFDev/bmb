@@ -3,6 +3,7 @@ package com.example.bmb.adapters;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.ColorStateList;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -13,20 +14,28 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatImageButton;
-import androidx.core.content.ContextCompat;
+import androidx.appcompat.widget.LinearLayoutCompat;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.transition.Transition;
 import com.example.bmb.R;
+import com.example.bmb.utils.ShimmerViewHelper;
 import com.example.bmb.data.PostManager;
 import com.example.bmb.data.models.PostModel;
 import com.example.bmb.ui.MainActivity;
 import com.example.bmb.ui.main.AddPostFragment;
+import com.example.bmb.ui.main.ProfileFragment;
 import com.example.bmb.utils.ProgressUtils;
 import com.example.bmb.utils.TimeAgoUtils;
+import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -51,9 +60,14 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         private ImageView ivPostImage, ivUserImage;
         private MaterialTextView tvPostContent, tvUserName, tvTime;
         private AppCompatImageButton btnFavorite;
+        private LinearLayoutCompat llUser;
+        private ShimmerViewHelper shimmerViewHelper;
+        private ShimmerFrameLayout shimmerPostImage, shimmerUserImage;
 
         public PostViewHolder(View itemView) {
             super(itemView);
+            shimmerPostImage = itemView.findViewById(R.id.shimmerPostImage);
+            shimmerUserImage = itemView.findViewById(R.id.shimmerUserImage);
             btnOptions = itemView.findViewById(R.id.btnOptions);
             btnFavorite = itemView.findViewById(R.id.btnFavorite);
             ivPostImage = itemView.findViewById(R.id.ivPostImage);
@@ -61,7 +75,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             tvPostContent = itemView.findViewById(R.id.tvPostContent);
             tvUserName = itemView.findViewById(R.id.tvUserName);
             tvTime = itemView.findViewById(R.id.tvTime);
+            llUser = itemView.findViewById(R.id.llUser);
 
+            shimmerViewHelper = new ShimmerViewHelper(shimmerPostImage);
         }
     }
 
@@ -81,6 +97,8 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     public void onBindViewHolder(PostViewHolder holder, int position) {
         PostModel post = postList.get(position);
 
+        holder.shimmerViewHelper.startShimmer();
+
         checkFavoriteStatus(post, holder);
 
         holder.tvPostContent.setText(post.getDescription());
@@ -89,8 +107,27 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
 
         Glide.with(holder.itemView.getContext())
                 .load(post.getImageUrl())
-                .placeholder(R.drawable.ic_image_placeholder)
-                .into(holder.ivPostImage);
+                .error(R.drawable.ic_image_placeholder)
+                .into(new com.bumptech.glide.request.target.CustomTarget<Drawable>() {
+                    @Override
+                    public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
+                        holder.ivPostImage.setImageDrawable(resource);
+                        holder.shimmerPostImage.stopShimmer();
+                        holder.shimmerPostImage.setVisibility(View.GONE);
+                        holder.ivPostImage.setVisibility(View.VISIBLE);
+                    }
+
+                    public void onLoadFailed(@Nullable Drawable errorDrawable) {
+                        holder.ivPostImage.setImageDrawable(errorDrawable);
+                        holder.shimmerPostImage.stopShimmer();
+                        holder.shimmerPostImage.setVisibility(View.GONE);
+                        holder.ivPostImage.setVisibility(View.VISIBLE);
+                    }
+
+                    @Override
+                    public void onLoadCleared(@Nullable Drawable placeholder) {
+                    }
+                });
 
         loadUserDetails(post.getIdUser(), holder);
 
@@ -103,6 +140,21 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             holder.btnOptions.setVisibility(View.VISIBLE);
             holder.btnOptions.setOnClickListener(v -> showOptionsSheet(holder.itemView.getContext(), postId, position));
         }
+
+        holder.llUser.setOnClickListener(v -> {
+            FragmentManager fragmentManager = ((AppCompatActivity) v.getContext()).getSupportFragmentManager();
+
+            ProfileFragment profileFragment = new ProfileFragment();
+
+            Bundle bundle = new Bundle();
+            bundle.putString("userId", post.getIdUser());
+            profileFragment.setArguments(bundle);
+
+            fragmentManager.beginTransaction()
+                    .replace(R.id.fragmentContainer, profileFragment)
+                    .addToBackStack(null)
+                    .commit();
+        });
     }
 
     private void loadUserDetails(String userId, PostViewHolder holder) {
@@ -114,10 +166,32 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         String userName = documentSnapshot.getString("name");
 
                         holder.tvUserName.setText(userName);
+
                         Glide.with(holder.itemView.getContext())
                                 .load(userPhotoUrl)
-                                .placeholder(R.drawable.ic_user_photo)
-                                .into(holder.ivUserImage);
+                                .error(R.drawable.ic_user)
+                                .into(new com.bumptech.glide.request.target.CustomTarget<Drawable>() {
+                                    @Override
+                                    public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
+                                        holder.ivUserImage.setImageDrawable(resource);
+                                        holder.shimmerUserImage.stopShimmer();
+                                        holder.shimmerUserImage.setVisibility(View.GONE);
+                                        holder.ivUserImage.setVisibility(View.VISIBLE);
+                                    }
+
+                                    @Override
+                                    public void onLoadFailed(@Nullable Drawable errorDrawable) {
+                                        holder.ivUserImage.setImageDrawable(errorDrawable);
+                                        holder.shimmerUserImage.stopShimmer();
+                                        holder.shimmerUserImage.setVisibility(View.GONE);
+                                        holder.ivUserImage.setVisibility(View.VISIBLE);
+                                    }
+
+                                    @Override
+                                    public void onLoadCleared(@Nullable Drawable placeholder){
+
+                                    }
+                                });
 
                     } else {
                         Log.d("PostsAdapter", "No se encontraron datos para el usuario actual");

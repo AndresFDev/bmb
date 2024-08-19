@@ -49,26 +49,31 @@ public class AuthManager {
 
     public interface OnSignInListener {
         void onSignInSuccess(FirebaseUser user);
+
         void onSignInFailure(String error);
     }
 
     public interface OnSignUpListener {
         void onSignUpSuccess(FirebaseUser user);
+
         void onSignUpFailure(String error);
     }
 
     public interface DeleteUserCallback {
         void onSuccess();
+
         void onFailure(String error);
     }
 
     public interface UpdateUserCallback {
         void onSuccess();
+
         void onFailure(Exception e);
     }
 
     public interface OnUserDataFetchListener {
         void onSuccess(Map<String, Object> userData);
+
         void onFailure(String errorMessage);
     }
 
@@ -161,7 +166,6 @@ public class AuthManager {
                     if (task.isSuccessful()) {
                         user.delete()
                                 .addOnSuccessListener(aVoid -> {
-                                    Log.d("AuthManager", "Usuario eliminado correctamente de Firebase Authentication");
                                     signOut();
                                 })
                                 .addOnFailureListener(e -> {

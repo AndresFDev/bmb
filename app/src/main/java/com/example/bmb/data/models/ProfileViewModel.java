@@ -30,28 +30,55 @@ public class ProfileViewModel extends ViewModel {
         currentUserLiveData = new MutableLiveData<>(auth.getCurrentUser());
         postListLiveData = new MutableLiveData<>(new ArrayList<>());
         userDataLiveData = new MutableLiveData<>(new HashMap<>());
-        fetchUserPosts();
-        fetchUserData();
+        fetchUserData(null);
+        fetchUserPosts(null);
     }
 
     public LiveData<FirebaseUser> getCurrentUser() {
         return currentUserLiveData;
     }
 
-    public LiveData<List<PostModel>> getPostList() {
+    public LiveData<List<PostModel>> getPostList(String userId) {
         return postListLiveData;
     }
 
-    public LiveData<Map<String, Object>> getUserData() {
+    public LiveData<Map<String, Object>> getUserData(String userId) {
         return userDataLiveData;
     }
 
-    private void fetchUserPosts() {
+
+    public void fetchUserData(String userId) {
         FirebaseUser currentUser = auth.getCurrentUser();
-        if (currentUser == null) return;
+
+        if (userId == null && currentUser != null) {
+            userId = currentUser.getUid();
+        }
+
+        if (userId == null) return;
+
+        db.collection("users").document(userId)
+                .addSnapshotListener((documentSnapshot, e) -> {
+                    if (e != null) {
+                        Log.e("ProfileViewModel", "Error al obtener los datos del usuario: " + e.getMessage());
+                        return;
+                    }
+                    if (documentSnapshot != null && documentSnapshot.exists()) {
+                        userDataLiveData.setValue(documentSnapshot.getData());
+                    }
+                });
+    }
+
+    public void fetchUserPosts(String userId) {
+        FirebaseUser currentUser = auth.getCurrentUser();
+
+        if (userId == null && currentUser != null) {
+            userId = currentUser.getUid();
+        }
+
+        if (userId == null) return;
 
         db.collection("posts")
-                .whereEqualTo("idUser", currentUser.getUid())
+                .whereEqualTo("idUser", userId)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
@@ -65,21 +92,5 @@ public class ProfileViewModel extends ViewModel {
                     postListLiveData.setValue(postList);
                 })
                 .addOnFailureListener(e -> Log.e("ProfileViewModel", "Error al obtener los posts: " + e.getMessage()));
-    }
-
-    private void fetchUserData() {
-        FirebaseUser currentUser = auth.getCurrentUser();
-        if (currentUser == null) return;
-
-        db.collection("users").document(currentUser.getUid())
-                .addSnapshotListener((documentSnapshot, e) -> {
-                    if (e != null) {
-                        Log.e("ProfileViewModel", "Error al obtener los datos del usuario: " + e.getMessage());
-                        return;
-                    }
-                    if (documentSnapshot != null && documentSnapshot.exists()) {
-                        userDataLiveData.setValue(documentSnapshot.getData());
-                    }
-                });
     }
 }

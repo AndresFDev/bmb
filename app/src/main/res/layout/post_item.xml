@@ -18,11 +18,30 @@
             android:gravity="center"
             android:orientation="vertical">
 
-            <ImageView
-                android:id="@+id/ivPostImage"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="350dp"
-                android:scaleType="centerCrop" />
+                android:layout_height="350dp">
+
+                <ImageView
+                    android:id="@+id/ivPostImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop" />
+
+
+                <com.facebook.shimmer.ShimmerFrameLayout
+                    android:id="@+id/shimmerPostImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="?attr/colorPrimary" />
+
+                </com.facebook.shimmer.ShimmerFrameLayout>
+
+            </FrameLayout>
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tvPostContent"
@@ -30,30 +49,44 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="3"
-                android:padding="@dimen/small" />
+                android:padding="@dimen/small"
+                android:textSize="@dimen/textMedium" />
 
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="1dp" />
 
             <androidx.appcompat.widget.LinearLayoutCompat
+                android:id="@+id/llUser"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="horizontal"
-                android:padding="@dimen/xSmall">
+                android:padding="@dimen/small">
 
                 <androidx.cardview.widget.CardView
-                    android:layout_width="@dimen/large"
-                    android:layout_height="@dimen/large"
+                    android:layout_width="@dimen/xLarge"
+                    android:layout_height="@dimen/xLarge"
                     android:layout_marginEnd="@dimen/small"
                     app:cardCornerRadius="@dimen/large">
 
                     <ImageView
                         android:id="@+id/ivUserImage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
                         android:scaleType="centerCrop" />
+
+                    <com.facebook.shimmer.ShimmerFrameLayout
+                        android:id="@+id/shimmerUserImage"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <View
+                            android:layout_width="wrap_content"
+                            android:layout_height="@dimen/xLarge"
+                            android:background="?attr/colorPrimary" />
+
+                    </com.facebook.shimmer.ShimmerFrameLayout>
 
                 </androidx.cardview.widget.CardView>
 
@@ -63,6 +96,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:gravity="start"
+                    android:textSize="@dimen/textMedium"
                     app:fontFamily="@font/product_sans_bold" />
 
                 <com.google.android.material.textview.MaterialTextView

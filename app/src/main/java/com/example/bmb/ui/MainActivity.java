@@ -3,26 +3,29 @@ package com.example.bmb.ui;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.menu.MenuBuilder;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
-import android.graphics.Rect;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 import android.view.Menu;
 
 import com.bumptech.glide.Glide;
+import com.example.bmb.MessageNotificationService;
+import com.example.bmb.ui.main.ChatListFragment;
 import com.example.bmb.ui.main.AddPostFragment;
-import com.example.bmb.ui.main.AdoptionFragment;
 import com.example.bmb.ui.main.FavoritesFragment;
 import com.example.bmb.ui.main.HomeFragment;
 import com.example.bmb.ui.main.ProfileFragment;
@@ -48,10 +51,25 @@ public class MainActivity extends AppCompatActivity implements KeyboardVisibilit
     private LinearLayout llUser;
     private KeyboardVisibilityHelper keyboardVisibilityHelper;
 
+    private static final int REQUEST_CODE_POST_NOTIFICATIONS = 1001;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Intent serviceIntent = new Intent(this, MessageNotificationService.class);
+        startService(serviceIntent);
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
+                        REQUEST_CODE_POST_NOTIFICATIONS);
+            }
+        }
 
         bottomNavigation = findViewById(R.id.bottomNavigation);
         llUser = findViewById(R.id.llUser);
@@ -97,6 +115,19 @@ public class MainActivity extends AppCompatActivity implements KeyboardVisibilit
             bottomNavigation.setVisibility(View.GONE);
         } else {
             bottomNavigation.setVisibility(View.VISIBLE);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_CODE_POST_NOTIFICATIONS) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permiso concedido
+            } else {
+                // Permiso denegado
+            }
         }
     }
 
@@ -147,10 +178,11 @@ public class MainActivity extends AppCompatActivity implements KeyboardVisibilit
         } else if (itemId == R.id.home) {
             item.setIcon(R.drawable.ic_home_selected);
             selectedFragment = new HomeFragment();
+        }  else if (itemId == R.id.messages) {
+            item.setIcon(R.drawable.ic_chat_selected);
+            selectedFragment = new ChatListFragment();
         } else if (itemId == R.id.vet) {
             selectedFragment = new VetsFragment();
-        } else if (itemId == R.id.adop) {
-            selectedFragment = new AdoptionFragment();
         }
 
         if (selectedFragment != null) {

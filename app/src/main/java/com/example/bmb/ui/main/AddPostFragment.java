@@ -19,6 +19,7 @@ import com.example.bmb.R;
 import com.example.bmb.data.ImageManager;
 import com.example.bmb.data.PostManager;
 import com.example.bmb.data.models.PostModel;
+import com.example.bmb.utils.ProgressUtils;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -79,6 +80,9 @@ public class AddPostFragment extends Fragment {
         ivPhoto = view.findViewById(R.id.ivPhoto);
         btnAddPost = view.findViewById(R.id.btnAddPost);
 
+        ProgressUtils.initProgress(getContext(), (ViewGroup) view);
+
+
         btnImage.setOnClickListener(v -> {
             imagePickerLauncher.launch("image/*");
         });
@@ -123,6 +127,7 @@ public class AddPostFragment extends Fragment {
     }
 
     private void addNewPost(String title, String description, String phone, String city, long timestamp, String idUser) {
+        ProgressUtils.showProgress();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         DocumentReference newPostRef = db.collection("posts").document();
         String id = newPostRef.getId();
@@ -131,6 +136,7 @@ public class AddPostFragment extends Fragment {
             postManager.addPost(id, imageUrl, title, description, idUser, phone, city, timestamp, new PostManager.OnPostAddedListener() {
                 @Override
                 public void onSuccess(PostModel post) {
+                    ProgressUtils.hideProgress();
                     Toast.makeText(getActivity(), "Post creado con exito", Toast.LENGTH_SHORT).show();
                     getActivity().getSupportFragmentManager().beginTransaction()
                             .replace(R.id.fragmentContainer, new HomeFragment())
@@ -139,15 +145,18 @@ public class AddPostFragment extends Fragment {
 
                 @Override
                 public void onFailure(String errorMessage) {
+                    ProgressUtils.hideProgress();
                     Toast.makeText(getActivity(), "error creando post: " + errorMessage, Toast.LENGTH_SHORT).show();
                 }
             });
         }, e -> {
+            ProgressUtils.hideProgress();
             Toast.makeText(getActivity(), "Error subiendo una imagen: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         });
     }
 
     private void updatePost(String title, String description, String phone, String city, long timestamp, String idUser) {
+        ProgressUtils.showProgress();
         Map<String, Object> updatedData = new HashMap<>();
         updatedData.put("title", title);
         updatedData.put("description", description);
@@ -162,6 +171,7 @@ public class AddPostFragment extends Fragment {
                 postManager.updatePost(postId, updatedData, new PostManager.OnPostUpdatedListener() {
                     @Override
                     public void onSuccess() {
+                        ProgressUtils.hideProgress();
                         Toast.makeText(getActivity(), "Post actualizado", Toast.LENGTH_SHORT).show();
                         getActivity().getSupportFragmentManager().beginTransaction()
                                 .replace(R.id.fragmentContainer, new HomeFragment())
@@ -170,10 +180,12 @@ public class AddPostFragment extends Fragment {
 
                     @Override
                     public void onFailure(String error) {
+                        ProgressUtils.hideProgress();
                         Toast.makeText(getActivity(), "Error actualizando el post: " + error, Toast.LENGTH_SHORT).show();
                     }
                 });
             }, e -> {
+                ProgressUtils.hideProgress();
                 Toast.makeText(getActivity(), "Error actualizando la imagen: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
         } else {
@@ -182,6 +194,7 @@ public class AddPostFragment extends Fragment {
             postManager.updatePost(postId, updatedData, new PostManager.OnPostUpdatedListener() {
                 @Override
                 public void onSuccess() {
+                    ProgressUtils.hideProgress();
                     Toast.makeText(getActivity(), "Post actualizado", Toast.LENGTH_SHORT).show();
                     getActivity().getSupportFragmentManager().beginTransaction()
                             .replace(R.id.fragmentContainer, new HomeFragment())
@@ -190,6 +203,7 @@ public class AddPostFragment extends Fragment {
 
                 @Override
                 public void onFailure(String error) {
+                    ProgressUtils.hideProgress();
                     Toast.makeText(getActivity(), "Error actualizando el post: " + error, Toast.LENGTH_SHORT).show();
                 }
             });
@@ -197,6 +211,7 @@ public class AddPostFragment extends Fragment {
     }
 
     private void loadPostData(String postId) {
+        ProgressUtils.showProgress();
         FirebaseFirestore.getInstance().collection("posts").whereEqualTo("id", postId).get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!queryDocumentSnapshots.isEmpty()) {
@@ -209,9 +224,13 @@ public class AddPostFragment extends Fragment {
                         String imageUrl = documentSnapshot.getString("imageUrl");
                         currentImageUrl = documentSnapshot.getString("imageUrl");
                         Glide.with(this).load(imageUrl).into(ivPhoto);
+                        ProgressUtils.hideProgress();
                     }
                 })
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Error cargando los datos del post", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> {
+                    ProgressUtils.hideProgress();
+                    Toast.makeText(getContext(), "Error cargando los datos del post", Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void uploadImageToFirebase(Bitmap bitmap, OnSuccessListener<String> onSuccessListener, OnSuccessListener<Exception> onFailureListener) {

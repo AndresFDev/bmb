@@ -26,4 +26,6 @@
     <string name="msgReg1_v">También puedes registrarte con</string>
     <string name="msgReg2_r">Si ya estas registrado Inicia Sesion</string>
     <string name="forgotPass">¿Olvidaste tu contraseña?</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
